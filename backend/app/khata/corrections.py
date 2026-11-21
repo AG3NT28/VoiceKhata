@@ -45,3 +45,9 @@ async def correct_transaction(
     await db.refresh(new_txn)
     await db.refresh(original)
     return new_txn
+
+async def void_transaction(db: AsyncSession, original: Transaction, actor: str = 'shopkeeper') -> Transaction:
+    original.status = TxnStatus.voided
+    await db.commit()
+    await db.refresh(original)
+    return original
