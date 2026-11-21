@@ -1,12 +1,268 @@
 <!DOCTYPE html>
-<html lang='en'>
-  <head>
-    <meta charset='UTF-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-    <title>Voice Khata</title>
-  </head>
-  <body>
-    <div id='root'></div>
-    <script type='module' src='/src/main.jsx'></script>
-  </body>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VoiceKhata</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div class="topbar"><h2 id="title">Dashboard</h2><button type="button" id="addCustomerButton" aria-label="Add customer" data-i18n-aria-label="addCustomer">+</button></div>
+<main class="main">
+  <section id="dashboard" class="section active">
+    <div class="credit-overview" aria-label="Customer credit totals" data-i18n-aria-label="creditTotals">
+      <div class="credit-stat credit-loan">
+        <div class="stat-label" data-i18n="creditGiven">Credit loan</div>
+        <div class="stat-value" id="totalCreditGiven">₹0</div>
+      </div>
+      <div class="credit-stat">
+        <div class="stat-label" data-i18n="creditTaken">Taken</div>
+        <div class="stat-value" id="totalCreditTaken">₹0</div>
+      </div>
+    </div>
+    <div class="daily-snapshot" aria-label="Daily snapshot">
+      <div class="credit-stat">
+        <div class="stat-label" data-i18n="todaySales">Today credit</div>
+        <div class="stat-value" id="todayCredit">₹0</div>
+      </div>
+      <div class="credit-stat">
+        <div class="stat-label" data-i18n="todayPayments">Today payments</div>
+        <div class="stat-value" id="todayPayments">₹0</div>
+      </div>
+      <div class="credit-stat low-stock">
+        <div class="stat-label" data-i18n="lowStock">Low stock</div>
+        <div class="stat-value" id="lowStockCount">0</div>
+      </div>
+    </div>
+    <div class="voice-action">
+      <button type="button" class="voice-button" aria-label="Voice input" aria-pressed="false">
+        <span class="mic-equalizer" aria-hidden="true">
+          <span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span>
+          <span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span>
+          <span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span>
+          <span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span>
+          <span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span><span class="loader-block"></span>
+        </span>
+      </button>
+      <p class="voice-instruction">Bolne ke liye dabaiye</p>
+    </div>
+    <div class="card recent-card">
+      <h3 class="recent-heading" data-i18n="recentActivity">Recent activity</h3>
+      <ul id="recentActivity" class="recent-list"></ul>
+    </div>
+    <form id="customerCodeLookup" class="code-lookup" autocomplete="off">
+      <label class="field-label" for="customerCodeInput" data-i18n="lookupByCode">Lookup by customer ID</label>
+      <div class="code-lookup-row">
+        <input id="customerCodeInput" type="text" inputmode="text" placeholder="e.g. C0001" data-i18n-placeholder="codePlaceholder" aria-label="Customer ID" data-i18n-aria-label="customerCode" />
+        <button type="submit" data-i18n="lookup">Lookup</button>
+      </div>
+      <p id="codeLookupNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+    </form>
+  </section>
+  <section id="profile" class="section"><div class="card profile"><div class="avatarbig">RK</div><h3 style="color:var(--text);font-size:16px;margin-bottom:10px" data-i18n="profile">Profile</h3><div class="form-row"><input value="Ramesh Kumar" aria-label="Name" data-i18n-aria-label="name"/></div><div class="form-row"><input value="ramesh@voicekhata.in" aria-label="Email" data-i18n-aria-label="email"/></div><div class="form-row"><input value="+91 98765 43210" aria-label="Phone number" data-i18n-aria-label="phoneNumber"/></div><div class="form-row"><input value="Ramesh General Store" aria-label="Store name" data-i18n-aria-label="storeName"/></div><div class="form-row"><input value="MG Road, Pune" aria-label="Address" data-i18n-aria-label="address"/></div><div class="language-setting"><label id="languageLabel" data-i18n="language">Language</label><details id="languageDropdown" class="language-dropdown" aria-labelledby="languageLabel"><summary><span id="languageSelectedLabel">English</span><svg class="language-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></summary><div class="language-options" role="group" aria-labelledby="languageLabel"><button type="button" class="language-option" data-language="en" aria-pressed="true">English</button><button type="button" class="language-option" data-language="hi" aria-pressed="false">हिन्दी</button><button type="button" class="language-option" data-language="bn" aria-pressed="false">বাংলা</button><button type="button" class="language-option" data-language="mr" aria-pressed="false">मराठी</button><button type="button" class="language-option" data-language="te" aria-pressed="false">తెలుగు</button><button type="button" class="language-option" data-language="ta" aria-pressed="false">தமிழ்</button><button type="button" class="language-option" data-language="or" aria-pressed="false">ଓଡ଼ିଆ</button><button type="button" class="language-option" data-language="ml" aria-pressed="false">മലയാളം</button></div></details></div><p id="languageNotice" class="form-notice" role="status" aria-live="polite" hidden></p><button style="width:100%" data-i18n="saveChanges">Save Changes</button></div></section>
+  <section id="bills" class="section">
+    <div class="card report-overview">
+      <div>
+        <h3 data-i18n="reportsSummary">Reports summary</h3>
+        <p data-i18n="reportsLine">Total sales ₹4.82L · Purchases ₹3.11L · Profit ₹1.71L</p>
+      </div>
+      <button id="viewReportButton" type="button" data-i18n="viewReport">View report</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px"><button id="tabSales" style="flex:1" data-i18n="sales" aria-selected="true">Sales</button><button id="tabPurch" class="secondary" style="flex:1" data-i18n="purchases" aria-selected="false">Purchases</button></div>
+    <div class="card" id="salesCard"><div class="inv-bar"><input id="salesSearch" type="search" placeholder="Search sales bills..." data-i18n-placeholder="searchSalesBills" aria-label="Search sales bills" data-i18n-aria-label="searchSalesBills"/><button type="button" id="addSalesBillButton" data-i18n="addBill">+ Add Bill</button><input type="file" id="salesFile" accept="image/*,application/pdf" style="display:none"/></div><table class="table"><thead><tr><th data-i18n="bill">Bill</th><th data-i18n="date">Date</th><th data-i18n="customer">Customer</th><th data-i18n="amountShort">Amt</th><th data-i18n="status">Status</th></tr></thead><tbody id="billsTable"></tbody></table></div>
+    <div class="card" id="purchCard" style="display:none"><div class="inv-bar"><input id="purchSearch" type="search" placeholder="Search purchase bills..." data-i18n-placeholder="searchPurchaseBills" aria-label="Search purchase bills" data-i18n-aria-label="searchPurchaseBills"/><button type="button" id="addPurchBillButton" data-i18n="addBill">+ Add Bill</button><input type="file" id="purchFile" accept="image/*,application/pdf" style="display:none"/></div><table class="table"><thead><tr><th data-i18n="bill">Bill</th><th data-i18n="date">Date</th><th data-i18n="vendor">Vendor</th><th data-i18n="amountShort">Amt</th><th data-i18n="status">Status</th></tr></thead><tbody id="purchTable"></tbody></table></div>
+  </section>
+  <section id="inventory" class="section">
+    <div class="card">
+      <div class="inv-bar">
+        <input id="invSearch" placeholder="Search..." data-i18n-placeholder="search"/>
+        <button type="button" id="addInventoryButton" data-i18n="add">+ Add</button>
+      </div>
+      <p id="inventoryNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+      <table class="table">
+        <thead><tr><th data-i18n="item">Item</th><th data-i18n="stock">Stock</th><th data-i18n="price">Price</th><th data-i18n="status">Status</th></tr></thead>
+        <tbody id="invTable"></tbody>
+      </table>
+    </div>
+    <div class="card price-compare-card">
+      <div class="inv-bar">
+        <div>
+          <h3 style="color:var(--text);font-size:17px;letter-spacing:-.02em;text-transform:none" data-i18n="priceCompare">Price compare</h3>
+          <p style="color:var(--muted);font-size:13px" data-i18n="priceCompareHint">Mock wholesale quotes for low-stock / selected items</p>
+        </div>
+        <button type="button" id="refreshQuotes" class="secondary" data-i18n="refreshQuotes">Refresh quotes</button>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="priceCompareTable">
+          <thead>
+            <tr>
+              <th data-i18n="item">Item</th>
+              <th data-i18n="yourPrice">Your price</th>
+              <th>JumboTail</th>
+              <th>Flipkart</th>
+              <th>Amazon</th>
+              <th data-i18n="bestDeal">Best</th>
+            </tr>
+          </thead>
+          <tbody id="priceCompareBody"></tbody>
+        </table>
+      </div>
+      <p class="form-notice" data-i18n="priceCompareDisclaimer">Sample data only — not live marketplace scraping.</p>
+    </div>
+  </section>
+  <section id="customers" class="section">
+    <div class="card">
+      <div class="inv-bar">
+        <div>
+          <h3 style="color:var(--text);font-size:17px;letter-spacing:-.02em;text-transform:none" data-i18n="customers">Customers</h3>
+          <p style="color:var(--muted);font-size:13px" data-i18n="savedCustomerEntries">Your saved customer credit entries</p>
+        </div>
+        <div class="customer-toolbar">
+          <button id="customersAddButton" type="button"><span aria-hidden="true">＋</span> <span data-i18n="addCustomer">Add customer</span></button>
+        </div>
+      </div>
+      <form id="customerSearchForm" class="customer-search">
+        <input id="customerSearch" type="search" placeholder="Search customers by name, phone or ID" data-i18n-placeholder="searchCustomers" aria-label="Search customers" data-i18n-aria-label="searchCustomers" />
+        <button type="submit" data-i18n="searchButton">Search</button>
+      </form>
+      <p id="customerNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+      <div id="customerList" class="customer-list"></div>
+    </div>
+  </section>
+  <section id="addCustomer" class="section">
+    <div class="card customer-card">
+      <form id="customerForm" class="customer-form">
+        <div>
+          <h3 class="heading" id="customerFormTitle">Add customer</h3>
+          <p class="form-intro" data-i18n="customerFormIntro">Add contact details and record a credit entry.</p>
+        </div>
+        <div class="contact-actions">
+          <button type="button" id="pickContactButton" class="secondary" data-i18n="fromContacts">From contacts</button>
+          <button type="button" id="phoneOnlyToggle" class="secondary" data-i18n="phoneOnly">Phone only</button>
+        </div>
+        <p id="registeredCodeNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+        <div id="customerTxnHistory" class="customer-txn-history" hidden>
+          <h4 data-i18n="recentTxns">Recent transactions</h4>
+          <ul id="customerTxnList" class="recent-list"></ul>
+        </div>
+        <div class="input-field">
+          <input id="customerName" type="text" placeholder=" " autocomplete="name" />
+          <label for="customerName" data-i18n="customerName">Customer name</label>
+        </div>
+        <div class="input-field">
+          <input id="customerPhone" type="tel" placeholder=" " autocomplete="tel" required />
+          <label for="customerPhone" data-i18n="phoneNumber">Phone number</label>
+        </div>
+        <div class="credit-toggle" role="group" aria-label="Credit type" data-i18n-aria-label="creditType">
+          <button type="button" class="credit-option" data-type="given" aria-pressed="true" data-i18n="creditGiven">Credit given</button>
+          <button type="button" class="credit-option credit-taken" data-type="taken" aria-pressed="false" data-i18n="creditTaken">Got</button>
+        </div>
+        <div class="input-field">
+          <input id="customerAmount" type="number" min="0.01" step="0.01" placeholder=" " inputmode="decimal" />
+          <label id="customerAmountLabel" for="customerAmount">Amount (credit given)</label>
+        </div>
+        <div>
+          <label class="field-label" for="customerDate" data-i18n="dateTime">Date and time</label>
+          <input id="customerDate" type="datetime-local" />
+        </div>
+        <div>
+          <label class="attach-button" for="billAttach"><span aria-hidden="true">＋</span> <span data-i18n="attachBill">Attach bill</span></label>
+          <input type="file" id="billAttach" accept="image/*,application/pdf" hidden />
+        </div>
+        <p id="customerFormNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+        <button type="button" id="cancelCustomerEdit" class="secondary customer-cancel" hidden data-i18n="cancel">Cancel</button>
+        <button type="submit" class="save-customer" id="saveCustomerButton">Save customer</button>
+      </form>
+    </div>
+  </section>
+  <section id="report" class="section">
+    <div class="report-header">
+      <div>
+        <h2 data-i18n="reportTitle">Business report</h2>
+        <p data-i18n="reportSubtitle">Sales, purchases, profit and expenses</p>
+      </div>
+      <button type="button" class="secondary" id="backToBillsButton" data-i18n="backToBills">Back to bills</button>
+    </div>
+    <div class="report-summary">
+      <div class="report-stat"><div class="stat-label" data-i18n="totalSales">Total sales</div><div class="stat-value">₹4.82L</div></div>
+      <div class="report-stat"><div class="stat-label" data-i18n="purchases">Purchases</div><div class="stat-value">₹3.11L</div></div>
+      <div class="report-stat"><div class="stat-label" data-i18n="profit">Profit</div><div class="stat-value">₹1.71L</div></div>
+    </div>
+    <div class="report-grid">
+      <article class="card report-chart-card wide">
+        <h3 id="monthlyChartTitle" data-i18n="monthlyComparison">Monthly sales &amp; purchases</h3>
+        <p class="chart-subtitle" data-i18n="chartThousands">Monthly totals (₹k)</p>
+        <div class="chart-legend">
+          <span><i class="legend-dot"></i><span data-i18n="sales">Sales</span></span>
+          <span><i class="legend-dot purchase"></i><span data-i18n="purchases">Purchases</span></span>
+        </div>
+        <div class="chart-scroll">
+          <svg class="report-svg" viewBox="0 0 640 280" role="img" aria-labelledby="monthlyChartTitle monthlyChartDescription">
+            <desc id="monthlyChartDescription" data-i18n="monthlyChartDescription">Monthly comparison of sales and purchases from January to June.</desc>
+            <g class="grid-line"><path d="M58 50H608M58 110H608M58 170H608M58 230H608"></path></g>
+            <g class="axis-label" text-anchor="end">
+              <text x="48" y="54">60</text><text x="48" y="114">40</text><text x="48" y="174">20</text><text x="48" y="234">0</text>
+            </g>
+            <g>
+              <rect class="sales-bar" x="75" y="134" width="22" height="96" rx="4"></rect><rect class="purchase-bar" x="101" y="170" width="22" height="60" rx="4"></rect>
+              <rect class="sales-bar" x="165" y="116" width="22" height="114" rx="4"></rect><rect class="purchase-bar" x="191" y="158" width="22" height="72" rx="4"></rect>
+              <rect class="sales-bar" x="255" y="125" width="22" height="105" rx="4"></rect><rect class="purchase-bar" x="281" y="164" width="22" height="66" rx="4"></rect>
+              <rect class="sales-bar" x="345" y="104" width="22" height="126" rx="4"></rect><rect class="purchase-bar" x="371" y="146" width="22" height="84" rx="4"></rect>
+              <rect class="sales-bar" x="435" y="86" width="22" height="144" rx="4"></rect><rect class="purchase-bar" x="461" y="140" width="22" height="90" rx="4"></rect>
+              <rect class="sales-bar" x="525" y="74" width="22" height="156" rx="4"></rect><rect class="purchase-bar" x="551" y="128" width="22" height="102" rx="4"></rect>
+            </g>
+            <g class="axis-label" text-anchor="middle">
+              <text x="99" y="258">Jan</text><text x="189" y="258">Feb</text><text x="279" y="258">Mar</text>
+              <text x="369" y="258">Apr</text><text x="459" y="258">May</text><text x="549" y="258">Jun</text>
+            </g>
+          </svg>
+        </div>
+      </article>
+      <article class="card report-chart-card">
+        <h3 id="profitChartTitle" data-i18n="profitTrend">Profit trend</h3>
+        <p class="chart-subtitle" data-i18n="profitThousands">Monthly profit (₹k)</p>
+        <div class="chart-scroll">
+          <svg class="report-svg" viewBox="0 0 640 230" role="img" aria-labelledby="profitChartTitle profitChartDescription">
+            <desc id="profitChartDescription" data-i18n="profitChartDescription">Monthly profit trend from January to June.</desc>
+            <g class="grid-line"><path d="M58 50H608M58 82H608M58 114H608M58 146H608M58 178H608"></path></g>
+            <g class="axis-label" text-anchor="end">
+              <text x="48" y="54">18</text><text x="48" y="86">16</text><text x="48" y="118">14</text><text x="48" y="150">12</text><text x="48" y="182">10</text>
+            </g>
+            <path class="profit-area" d="M80 146L176 114L272 130L368 114L464 50L560 50V190H80Z"></path>
+            <polyline class="profit-line" points="80,146 176,114 272,130 368,114 464,50 560,50"></polyline>
+            <g>
+              <circle class="profit-point" cx="80" cy="146" r="5"></circle><circle class="profit-point" cx="176" cy="114" r="5"></circle>
+              <circle class="profit-point" cx="272" cy="130" r="5"></circle><circle class="profit-point" cx="368" cy="114" r="5"></circle>
+              <circle class="profit-point" cx="464" cy="50" r="5"></circle><circle class="profit-point" cx="560" cy="50" r="5"></circle>
+            </g>
+            <g class="axis-label" text-anchor="middle">
+              <text x="80" y="216">Jan</text><text x="176" y="216">Feb</text><text x="272" y="216">Mar</text>
+              <text x="368" y="216">Apr</text><text x="464" y="216">May</text><text x="560" y="216">Jun</text>
+            </g>
+          </svg>
+        </div>
+      </article>
+      <article class="card report-chart-card">
+        <h3 data-i18n="expenseBreakdown">Expense breakdown</h3>
+        <p class="chart-subtitle" data-i18n="expenseByCategory">Share by category</p>
+        <div class="expense-chart">
+          <div class="expense-donut" role="img" aria-label="Expenses: rent 35%, salary 28%, utilities 15%, marketing 12%, other 10%" data-i18n-aria-label="expenseChartDescription"></div>
+          <ul class="expense-legend">
+            <li><span class="expense-name"><i class="expense-swatch"></i><span data-i18n="rent">Rent</span></span><strong>35%</strong></li>
+            <li><span class="expense-name"><i class="expense-swatch salary"></i><span data-i18n="salary">Salary</span></span><strong>28%</strong></li>
+            <li><span class="expense-name"><i class="expense-swatch utilities"></i><span data-i18n="utilities">Utilities</span></span><strong>15%</strong></li>
+            <li><span class="expense-name"><i class="expense-swatch marketing"></i><span data-i18n="marketing">Marketing</span></span><strong>12%</strong></li>
+            <li><span class="expense-name"><i class="expense-swatch other"></i><span data-i18n="other">Other</span></span><strong>10%</strong></li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+<nav class="bottomnav" aria-label="Main navigation"><a href="#" data-view="dashboard" class="active" aria-current="page" aria-label="Home" data-i18n-aria-label="home"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"></path><path d="M5 9v11h14V9M9 20v-6h6v6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="home">Home</span></a><a href="#" data-view="bills" aria-label="Bills" data-i18n-aria-label="bills"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="bills">Bills</span></a><a href="#" data-view="customers" aria-label="Customers" data-i18n-aria-label="customers"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1zM16 5.2a3.5 3.5 0 0 1 0 6.6M18 14a5 5 0 0 1 3.5 4.8V20h-3"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="customers">Customers</span></a><a href="#" data-view="inventory" aria-label="Stock" data-i18n-aria-label="stock"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5zM3 8v9l9 5 9-5V8M12 13v9"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="stock">Stock</span></a><a href="#" data-view="profile" aria-label="Profile" data-i18n-aria-label="openProfile"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20v-1a8 8 0 0 1 16 0v1"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="profile">Profile</span></a></nav>
+<script type="module" src="/src/main.js"></script>
+</body>
 </html>

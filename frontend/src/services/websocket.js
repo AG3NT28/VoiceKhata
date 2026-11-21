@@ -9,15 +9,20 @@
  */
 export class VoiceSocket {
   constructor(url) {
-    this.url = url || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/voice`;
+    const apiBase = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
+    this.url = url || (apiBase
+      ? `${apiBase.replace(/^http/, 'ws')}/ws/voice`
+      : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/voice`);
     this.ws = null;
     this.resultHandlers = [];
     this.errorHandlers = [];
     this.readyHandlers = [];
     this._reconnectTimer = null;
+    this._intentionalClose = false;
   }
 
   connect() {
+    this._intentionalClose = false;
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.url);
@@ -45,6 +50,7 @@ export class VoiceSocket {
       this.ws.onerror = (err) => { reject(err); };
       this.ws.onclose = () => {
         this.ws = null;
+        if (this._intentionalClose) return;
         // auto-reconnect after 3s
         this._reconnectTimer = setTimeout(() => this.connect().catch(() => {}), 3000);
       };
@@ -73,6 +79,7 @@ export class VoiceSocket {
   onReady(handler) { this.readyHandlers.push(handler); return () => { this.readyHandlers = this.readyHandlers.filter((h) => h !== handler); }; }
 
   close() {
+    this._intentionalClose = true;
     if (this._reconnectTimer) clearTimeout(this._reconnectTimer);
     this._reconnectTimer = null;
     if (this.ws) { try { this.ws.close(); } catch {} this.ws = null; }

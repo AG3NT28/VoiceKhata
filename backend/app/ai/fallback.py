@@ -57,6 +57,8 @@ _CREDIT_WORDS = {
 }
 _BALANCE_WORDS = {"balance", "baaki", "baki", "hisaab", "hisab", "kitna", "kitne", "bacha", "bachega"}
 _SUMMARY_WORDS = {"summary", "report", "total", "aaj", "din", "hisab", "hisaab"}
+_STOCK_WORDS = {"stock", "inventory", "maal", "samaan", "stash", "store"}
+_KHATA_WORDS = {"khata", "ledger", "udhaar", "dues", "baaki"}
 _ADD_CUSTOMER_WORDS = {"naya", "nayi", "new", "banao", "banado", "add", "kholo", "khata"}
 _NAME_MARKERS = {"ka", "ko", "ne", "se", "ki", "ke"}
 _STOPWORDS = (
@@ -137,6 +139,22 @@ def _extract_name(text: str) -> str | None:
     return None
 
 
+def _is_add_customer_utterance(tokens: set[str], amount: int | None) -> bool:
+    """True for 'add customer X', 'X add karo', 'naya khata X', etc. (no credit amount)."""
+    add_verbs = {"add", "banao", "banado", "kholo", "register", "create"}
+    new_words = {"naya", "nayi", "new"}
+    customer_words = {"customer", "customers", "khata"}
+    # Explicit new-customer phrasing always wins (even if a number slipped in).
+    if (tokens & new_words) and (tokens & (customer_words | add_verbs | {"khata"})):
+        return True
+    # Without an amount, add/banao/kholo means register a customer, not credit.
+    if amount is None and (tokens & add_verbs):
+        return True
+    if amount is None and (tokens & customer_words) and (tokens & (add_verbs | new_words)):
+        return True
+    return False
+
+
 def parse_text(text: str) -> ExtractedIntent:
     """Parse a Hinglish utterance into a structured intent."""
     norm = _normalise(text)
@@ -152,12 +170,22 @@ def parse_text(text: str) -> ExtractedIntent:
             entities={"customer_name": name, "amount_rupees": parse_corrected_number(norm)},
         )
 
-    if ("naya" in tokens or "new" in tokens) and (tokens & {"customer", "customer:", "khata", "banao"}):
-        return ExtractedIntent(intent="ADD_CUSTOMER", confidence=0.9, entities={"customer_name": name})
+    if _is_add_customer_utterance(tokens, amount):
+        return ExtractedIntent(
+            intent="ADD_CUSTOMER",
+            confidence=0.9,
+            entities={"customer_name": name, "name": name},
+        )
 
     if tokens & _BALANCE_WORDS and not (tokens & _PAYMENT_WORDS):
         if name or "kitna" in tokens or "balance" in tokens:
             return ExtractedIntent(intent="CHECK_BALANCE", confidence=0.85, entities={"customer_name": name})
+
+    if tokens & _STOCK_WORDS and (tokens & _SUMMARY_WORDS or "kitna" in tokens or "low" in tokens or "kam" in tokens):
+        return ExtractedIntent(intent="STOCK_SUMMARY", confidence=0.9, entities={})
+
+    if tokens & _KHATA_WORDS and (tokens & _SUMMARY_WORDS or "summary" in tokens):
+        return ExtractedIntent(intent="KHATA_SUMMARY", confidence=0.9, entities={})
 
     if tokens & _SUMMARY_WORDS and not name and amount is None:
         return ExtractedIntent(intent="DAILY_SUMMARY", confidence=0.85, entities={})

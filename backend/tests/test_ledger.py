@@ -37,7 +37,7 @@ async def test_paise_conversion():
 async def test_create_customer_and_credit_payment_balance(db):
     shop_id = db._shop_id
     cust = await create_customer(db, shop_id, "Ramesh Kumar", "9999999999")
-    assert cust.customer_code == "C0001"
+    assert cust.customer_code == "RAM99"
     assert cust.name == "Ramesh Kumar"
 
     credit = await add_credit(db, shop_id, cust.id, rupees_to_paise(340), __import__("datetime").date.today())

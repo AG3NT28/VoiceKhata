@@ -6,6 +6,7 @@ See /docs (Swagger) when backend is running: http://127.0.0.1:8000/docs
 
 - POST /auth/login
 - POST /auth/register-shop
+- POST /auth/demo  (issues a JWT for the seeded demo shop; used by the UI)
 - GET /customers?q=&status=
 - POST /customers
 - GET /customers/{id}

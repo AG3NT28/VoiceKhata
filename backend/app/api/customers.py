@@ -5,7 +5,12 @@ from sqlalchemy import select, func
 
 from app.database.db import get_db
 from app.database.models import Customer, Shop
-from app.khata.customers import create_customer, find_customer_by_code, list_customers, generate_customer_code
+from app.khata.customers import (
+    create_customer,
+    find_customer_by_code,
+    list_customers,
+    refresh_customer_code,
+)
 from app.schemas import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListResponse, BalanceResponse
 from app.security.auth import get_current_shop_id
 
@@ -36,7 +41,12 @@ async def list_customers_endpoint(
 ):
     stmt = select(Customer).where(Customer.shop_id == shop_id)
     if q:
-        stmt = stmt.where(Customer.name.ilike(f"%{q}%"))
+        like = f"%{q}%"
+        stmt = stmt.where(
+            Customer.name.ilike(like)
+            | Customer.phone.ilike(like)
+            | Customer.customer_code.ilike(like)
+        )
     if status != "all":
         stmt = stmt.where(Customer.status == status)
     count_stmt = select(func.count()).select_from(stmt.subquery())
@@ -78,13 +88,21 @@ async def update_customer(
     cust = await db.get(Customer, customer_id)
     if not cust or cust.shop_id != shop_id:
         raise HTTPException(status_code=404, detail="Customer not found")
+    phone_updated = False
     if payload.name is not None:
         cust.name = payload.name.strip()
         cust.normalized_name = " ".join(payload.name.strip().lower().split())
     if payload.phone is not None:
-        cust.phone = payload.phone
+        new_phone = payload.phone.strip() if payload.phone else None
+        phone_updated = (new_phone or "") != (cust.phone or "")
+        cust.phone = new_phone
     if payload.status is not None:
         cust.status = payload.status
+    # When phone is filled/changed, upgrade provisional seeded ID → name3+phone2
+    if phone_updated and cust.phone:
+        await refresh_customer_code(db, cust)
+    elif payload.name is not None and cust.phone:
+        await refresh_customer_code(db, cust)
     await db.commit()
     await db.refresh(cust)
     return cust

@@ -1,6 +1,7 @@
 """Voice command orchestrator: transcript -> intent -> ledger action -> reply."""
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date
 
@@ -11,12 +12,14 @@ from app.ai.extraction import ExtractedIntent
 from app.ai.fallback import parse_text
 from app.ai.llm import extract_intent
 from app.config import settings
-from app.database.models import Customer, Transaction, TxnStatus, TxnType
+from app.database.models import Customer, Item, ItemStatus, Transaction, TxnStatus, TxnType
 from app.khata.corrections import correct_transaction
-from app.khata.customers import create_customer, find_customers_by_name
+from app.khata.customers import create_customer, find_customer_by_code, find_customers_by_name
 from app.khata.ledger import add_credit, compute_balance, record_payment
 from app.utils.dates import today_in_tz
 from app.utils.paise import paise_to_rupees, rupees_to_paise
+
+_CODE_RE = re.compile(r"\bC\d{3,}\b", re.IGNORECASE)
 
 DEFAULT_CLARIFY = "Samajh nahi aaya. Jaise boliye: 'Ramesh ka 340 rupaye udhaar'."
 
@@ -49,7 +52,19 @@ async def _customer_payload(db: AsyncSession, customer: Customer) -> dict:
     }
 
 
-async def _resolve(db: AsyncSession, shop_id: uuid.UUID, name: str | None):
+async def _resolve(db: AsyncSession, shop_id: uuid.UUID, name: str | None, transcript: str = ""):
+    """Resolve by customer code (C0001) first, then by name."""
+    haystack = f"{name or ''} {transcript or ''}"
+    code_match = _CODE_RE.search(haystack)
+    if code_match:
+        by_code = await find_customer_by_code(db, shop_id, code_match.group(0))
+        if by_code:
+            return by_code, []
+    if name and re.fullmatch(r"C\d{3,}", name.strip(), flags=re.IGNORECASE):
+        by_code = await find_customer_by_code(db, shop_id, name.strip())
+        if by_code:
+            return by_code, []
+        return None, []
     if not name:
         return None, []
     matches = await find_customers_by_name(db, shop_id, name)
@@ -133,7 +148,14 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
     intent = intent_obj.intent
     entities = intent_obj.entities or {}
     name = (entities.get("customer_name") or entities.get("name") or "").strip() or None
-    amount = entities.get("amount_rupees", entities.get("amount"))
+    # LLM may return amount_paise or amount_rupees — accept both
+    if entities.get("amount_paise") is not None:
+        try:
+            amount = float(entities["amount_paise"]) / 100.0
+        except (TypeError, ValueError):
+            amount = entities.get("amount_rupees", entities.get("amount"))
+    else:
+        amount = entities.get("amount_rupees", entities.get("amount"))
 
     result = {
         "transcript": transcript,
@@ -156,14 +178,24 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
                 reply_text="Customer ka naam kya hai?",
             )
             return result
-        existing, matches = await _resolve(db, shop_id, name)
+        existing, matches = await _resolve(db, shop_id, name, transcript)
         if existing:
             result["customer"] = await _customer_payload(db, existing)
             result["reply_text"] = f"{existing.name} pehle se hai, code {existing.customer_code}."
             return result
-        customer = await create_customer(db, shop_id, name)
+        if matches:
+            result.update(
+                needs_clarification=True,
+                reply_text=f"Do customer mile - {name}. Kaunsa?",
+                options=[c.name for c in matches],
+            )
+            return result
+        customer = await create_customer(db, shop_id, name)  # provisional code (name3 + seed) until phone is added
         result["customer"] = await _customer_payload(db, customer)
-        result["reply_text"] = f"Naya customer {customer.name} ban gaya, code {customer.customer_code}."
+        result["reply_text"] = (
+            f"Naya customer {customer.name} ban gaya, temporary ID {customer.customer_code}. "
+            f"Phone number form me daalne par ID update ho jayegi."
+        )
         return result
 
     # ---- ADD_CREDIT / RECORD_PAYMENT --------------------------------------
@@ -181,7 +213,7 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
             )
             return result
 
-        customer, matches = await _resolve(db, shop_id, name)
+        customer, matches = await _resolve(db, shop_id, name, transcript)
         if matches:
             result.update(
                 needs_clarification=True,
@@ -190,6 +222,13 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
             )
             return result
         if customer is None:
+            # Don't auto-create when the utterance looked like a code lookup.
+            if _CODE_RE.search(f"{name or ''} {transcript}"):
+                result.update(
+                    needs_clarification=True,
+                    reply_text="Is code se koi customer nahi mila. Code check karke phir try karein.",
+                )
+                return result
             customer = await create_customer(db, shop_id, name)
             result["entities"]["customer_created"] = True
 
@@ -233,7 +272,7 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
 
     # ---- CHECK_BALANCE -----------------------------------------------------
     if intent == "CHECK_BALANCE":
-        customer, matches = await _resolve(db, shop_id, name)
+        customer, matches = await _resolve(db, shop_id, name, transcript)
         if matches:
             result.update(
                 needs_clarification=True,
@@ -266,9 +305,44 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
         )
         return result
 
+    # ---- KHATA_SUMMARY -----------------------------------------------------
+    if intent == "KHATA_SUMMARY":
+        snapshot = await demo_state(db, shop_id)
+        customers = snapshot["customers"]
+        owed = [c for c in customers if c["balance_paise"] > 0]
+        total_due = sum(c["balance_paise"] for c in owed)
+        top = sorted(owed, key=lambda c: c["balance_paise"], reverse=True)[:3]
+        top_line = ", ".join(f"{c['name']} {_money(c['balance_paise'])}" for c in top) or "koi due nahi"
+        result["summary"] = {"total_due_paise": total_due, "customers_with_dues": len(owed)}
+        result["reply_text"] = (
+            f"Khata summary: {len(owed)} customers pe total {_money(total_due)} baaki. "
+            f"Top: {top_line}."
+        )
+        return result
+
+    # ---- STOCK_SUMMARY -----------------------------------------------------
+    if intent == "STOCK_SUMMARY":
+        inv = await db.execute(
+            select(Item).where(
+                Item.shop_id == shop_id,
+                Item.status == ItemStatus.active.value,
+            )
+        )
+        items = list(inv.scalars().all())
+        low = [i for i in items if i.quantity <= i.minimum_quantity]
+        if not items:
+            result["reply_text"] = "Inventory empty hai. Stock tab se items add karein."
+            return result
+        low_line = ", ".join(f"{i.name} {i.quantity}" for i in low[:4]) or "sab theek"
+        result["reply_text"] = (
+            f"Stock summary: {len(items)} items, {len(low)} low stock. "
+            f"Kam: {low_line}."
+        )
+        return result
+
     # ---- CORRECT_LAST ------------------------------------------------------
     if intent == "CORRECT_LAST":
-        customer, _ = await _resolve(db, shop_id, name)
+        customer, _ = await _resolve(db, shop_id, name, transcript)
         stmt = select(Transaction).where(
             Transaction.shop_id == shop_id, Transaction.status == TxnStatus.active
         )

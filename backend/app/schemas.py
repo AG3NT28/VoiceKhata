@@ -13,11 +13,15 @@ class LoginRequest(BaseModel):
     shop_id: UUID
     password: str
 
+class EmailLoginRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=254)
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     shop_id: UUID
     shop_name: str
+    email: Optional[str] = None
 
 # ---------- Customer ----------
 class CustomerCreate(BaseModel):
@@ -93,3 +97,57 @@ class DailySummaryResponse(BaseModel):
     net_paise: int
     transaction_count: int
     customers_served: int
+
+# ---------- Inventory ----------
+class InventoryItemCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    sku: Optional[str] = Field(None, max_length=40)
+    unit: str = Field("pcs", max_length=20)
+    quantity: int = Field(0, ge=0)
+    reorder_level: int = Field(5, ge=0)
+    unit_cost_rupees: Optional[float] = Field(None, ge=0)
+    unit_cost_paise: Optional[int] = Field(None, ge=0)
+
+class InventoryItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    sku: Optional[str] = Field(None, max_length=40)
+    unit: Optional[str] = Field(None, max_length=20)
+    quantity: Optional[int] = Field(None, ge=0)
+    reorder_level: Optional[int] = Field(None, ge=0)
+    unit_cost_rupees: Optional[float] = Field(None, ge=0)
+    unit_cost_paise: Optional[int] = Field(None, ge=0)
+
+class WholesaleQuoteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    item_id: UUID
+    source: str
+    price_paise: int
+    price_rupees: float
+    captured_at: datetime
+
+class InventoryItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    shop_id: UUID
+    name: str
+    sku: Optional[str]
+    unit: str
+    quantity: int
+    reorder_level: int
+    unit_cost_paise: int
+    unit_cost_rupees: float
+    low_stock: bool
+    created_at: datetime
+    updated_at: datetime
+
+class InventoryListResponse(BaseModel):
+    items: list[InventoryItemResponse]
+    total: int
+    low_stock_count: int
+
+class InventoryQuotesResponse(BaseModel):
+    item: InventoryItemResponse
+    quotes: list[WholesaleQuoteResponse]
+    best_source: Optional[str] = None
+    best_price_rupees: Optional[float] = None
