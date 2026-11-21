@@ -118,15 +118,21 @@ def _normalise(text: str) -> str:
 
 def _extract_name(text: str) -> str | None:
     tokens = re.findall(r"[a-zA-Z]+", text.lower())
-    # Pattern: <name> ka/ko/ne/se ...
+    # Strategy 1: name immediately before a marker word (ka/ko/ne/se/ke/ki)
     for i, token in enumerate(tokens):
         if token in _NAME_MARKERS and i > 0:
             candidate = tokens[i - 1]
             if candidate not in _STOPWORDS and len(candidate) > 1:
                 return candidate.capitalize()
-    # Fallback: first meaningful word
+    # Strategy 2: name immediately after a marker ("ka Ramesh")
+    for i, token in enumerate(tokens):
+        if token in _NAME_MARKERS and i + 1 < len(tokens):
+            candidate = tokens[i + 1]
+            if candidate not in _STOPWORDS and len(candidate) > 1:
+                return candidate.capitalize()
+    # Strategy 3: first meaningful non-keyword, non-number word
     for token in tokens:
-        if token not in _STOPWORDS and len(token) > 1:
+        if token not in _STOPWORDS and token not in _NUMBER_WORDS and len(token) > 1:
             return token.capitalize()
     return None
 
@@ -157,16 +163,24 @@ def parse_text(text: str) -> ExtractedIntent:
         return ExtractedIntent(intent="DAILY_SUMMARY", confidence=0.85, entities={})
 
     if tokens & _PAYMENT_WORDS:
+        if amount is None:
+            return ExtractedIntent(
+                intent="CLARIFY",
+                confidence=0.4,
+                entities={"customer_name": name},
+                clarification_needed=True,
+                clarification_question=f"Kitne rupaye {name or ''} se aaye? Amount dobara boliye.".strip(),
+            )
         return ExtractedIntent(
             intent="RECORD_PAYMENT",
-            confidence=0.85,
+            confidence=0.9,
             entities={"customer_name": name, "amount_rupees": amount},
         )
 
     if amount is not None and (tokens & _CREDIT_WORDS or name):
         return ExtractedIntent(
             intent="ADD_CREDIT",
-            confidence=0.85,
+            confidence=0.9,
             entities={"customer_name": name, "amount_rupees": amount},
         )
 
@@ -175,6 +189,16 @@ def parse_text(text: str) -> ExtractedIntent:
             intent="ADD_CREDIT",
             confidence=0.6,
             entities={"customer_name": name, "amount_rupees": amount},
+        )
+
+    if name and not amount:
+        return ExtractedIntent(
+            intent="CLARIFY",
+            confidence=0.5,
+            entities={"customer_name": name},
+            clarification_needed=True,
+            clarification_question=f"{name} ka kitne rupaye? Amount boliye.",
+            clarification_options=[],
         )
 
     return ExtractedIntent(

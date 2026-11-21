@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getState, sendAudio, sendText } from './services/api';
+import { getState, sendAudio, sendText, undoLast } from './services/api';
 import { VoiceRecorder, isRecordingSupported, speak, stopSpeaking } from './services/audio';
 
 const INTENT_META = {
@@ -321,6 +321,27 @@ export default function App() {
                           Dobara sunein
                         </button>
                       )}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          setError('');
+                          setBusy(true);
+                          stopSpeaking();
+                          try {
+                            const data = await undoLast();
+                            setResult((prev) => ({ ...prev, reply_text: data.reply_text }));
+                            await refresh();
+                          } catch (err) {
+                            setError(err.message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                        className="mt-2 ml-3 text-xs font-semibold text-rose-600 underline decoration-rose-300 underline-offset-2 disabled:opacity-40"
+                      >
+                        Undo last entry
+                      </button>
                     </div>
                   </div>
                 </div>

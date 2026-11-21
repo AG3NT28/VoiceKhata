@@ -32,4 +32,6 @@ export function sendText(text) {
   }).then(toJson);
 }
 
-export { API_BASE };
+export function undoLast() {
+  return fetch(`${API_BASE}/voice/undo`, { method: 'POST' }).then(toJson);
+}

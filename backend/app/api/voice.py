@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db
-from app.database.models import Shop
+from app.database.models import Shop, Transaction, TxnStatus
 from app.khata.customers import create_customer, find_customers_by_name
 from app.khata.ledger import add_credit, record_payment
 from app.utils.dates import today_in_tz
@@ -80,3 +80,21 @@ async def state(db: AsyncSession = Depends(get_db)):
     snapshot = await demo_state(db, shop.id)
     snapshot["shop"] = {"id": str(shop.id), "name": shop.name}
     return snapshot
+
+
+@router.post("/undo")
+async def undo_last(db: AsyncSession = Depends(get_db)):
+    shop = await get_demo_shop(db)
+    stmt = select(Transaction).where(
+        Transaction.shop_id == shop.id, Transaction.status == TxnStatus.active
+    ).order_by(Transaction.created_at.desc()).limit(1)
+    last = (await db.execute(stmt)).scalars().first()
+    if not last:
+        return {"ok": False, "reply_text": "Koi entry nahi jo undo kar sakun."}
+    from app.khata.corrections import void_transaction
+    await void_transaction(db, last)
+    return {
+        "ok": True,
+        "reply_text": "Undo ho gaya: %s Rs%.0f hata diya." % (last.type.value, last.amount_paise / 100),
+        "transaction_id": str(last.id),
+    }

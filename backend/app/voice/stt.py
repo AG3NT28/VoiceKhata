@@ -80,7 +80,7 @@ async def transcribe_detailed(
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer"]',
+        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs"]',
     }
     files = {"audio_file": (filename, audio_bytes, _mime_for(filename))}
 
@@ -179,7 +179,7 @@ async def transcribe_detailed(
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer"]',
+        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs"]',
     }
     files = {"audio_file": (filename, audio_bytes, _mime_for(filename))}
 
