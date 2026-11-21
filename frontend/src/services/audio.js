@@ -31,12 +31,12 @@ export class VoiceRecorder {
     this.startedAt = Date.now();
     this.mediaRecorder.start();
 
-    // Auto-stop after 12s so payloads stay small and latency stays low.
+    // Auto-stop after 8s so payloads stay small and latency stays low.
     this._autoStopTimer = setTimeout(() => {
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
         this.mediaRecorder.stop();
       }
-    }, 12000);
+    }, 8000);
   }
 
   /** Stops recording and resolves to a WAV Blob. */

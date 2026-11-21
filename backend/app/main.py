@@ -13,6 +13,8 @@ from app.database.models import Base
 from app.voice.websocket import router as ws_router
 
 
+from app.voice.stt import close_client
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
@@ -20,6 +22,7 @@ async def lifespan(app: FastAPI):
     async with SessionLocal() as db:
         await get_demo_shop(db)
     yield
+    await close_client()
 
 
 app = FastAPI(title='Voice Khata', version='0.2.0', lifespan=lifespan)

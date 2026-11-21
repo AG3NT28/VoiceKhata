@@ -203,7 +203,7 @@ export default function App() {
 
                 <p className="mt-4 text-base font-semibold">
                   {recording
-                    ? `Sun raha hoon. ${seconds}s (max 12s)`
+                    ? `Sun raha hoon. ${seconds}s (max 8s)`
                     : busy
                     ? 'Process ho raha hai…'
                     : 'Bolne ke liye dabaiye'}
