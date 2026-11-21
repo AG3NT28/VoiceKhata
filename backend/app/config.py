@@ -1,6 +1,8 @@
-﻿from pydantic_settings import BaseSettings
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     DATABASE_URL: str = "sqlite+aiosqlite:///./voice_khata.db"
     JWT_SECRET: str = "dev-secret-change-me"
     GNANI_API_KEY: str = ""
@@ -8,8 +10,5 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.groq.com/openai/v1"
     LLM_MODEL: str = "llama-3.3-70b-versatile"
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings()
