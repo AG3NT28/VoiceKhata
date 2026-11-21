@@ -1,0 +1,10 @@
+.git
+.github
+**/node_modules
+**/venv
+**/__pycache__
+**/*.pyc
+backend/voice_khata.db
+backend/*.log
+frontend/dist
+docs

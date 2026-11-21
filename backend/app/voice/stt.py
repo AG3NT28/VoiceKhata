@@ -10,14 +10,62 @@ canned transcript when neither is available (offline demo mode).
 from __future__ import annotations
 
 import asyncio
+import json
+
 import httpx
 
 from app.config import settings
 
 GNANI_STT_URL = "https://api.vachana.ai/stt/v3"
-DEFAULT_LANGUAGES = "hi-IN,en-IN"
+# Hindi + English first, then the South Indian languages the UI offers.
+DEFAULT_LANGUAGES = "hi-IN,en-IN,te-IN,kn-IN,ta-IN"
 
 MOCK_TRANSCRIPT = "Ramesh ka 340 rupaye udhaar likho"
+
+# Domain vocabulary in every supported language. Gnani uses these as hints so
+# ledger words (credit, payment, balance, numbers) survive transliteration.
+# Both native script and common Latin transliterations are included.
+KEYTERMS = [
+    # Hindi / Hinglish
+    "udhaar", "udhar", "khata", "khate", "rupaye", "rupee", "baaki", "baki",
+    "jama", "jamaa", "payment", "balance", "likho", "likh", "diye", "diya",
+    "customer", "credit", "debit", "bahi", "hisaab", "hisab", "aaj", "kal",
+    "ek", "do", "teen", "char", "paanch", "chhe", "saat", "aath", "nau", "das",
+    "sau", "hazaar", "lakh", "rs",
+    # Telugu (తెలుగు)
+    "అప్పు", "ఖాతా", "రూపాయలు", "బాకీ", "జమా", "చెల్లింపు", "బ్యాలెన్స్",
+    "రాయు", "ఇచ్చాను", "తీసుకున్నాను", "కస్టమర్", "లెక్క", "నేటికి",
+    "appu", "appulu", "khata", "rupayalu", "baaki", "jama", "chellimpu",
+    "balance", "raayu", "ichchanu", "theesukunnaanu", "customer", "lekka",
+    "okati", "rendu", "moodu", "naalugu", "aidu", "aaru", "edu", "enimidi",
+    "tommidi", "padi", "vandha", "veyyi", "laksha",
+    # Kannada (ಕನ್ನಡ)
+    "ಅಪ್ಪು", "ಖಾತೆ", "ರೂಪಾಯಿ", "ಬಾಕಿ", "ಜಮಾ", "ಪಾವತಿ", "ಬ್ಯಾಲೆನ್ಸ್",
+    "ಬರೆ", "ಕೊಟ್ಟೆ", "ಪಡೆದೆ", "ಗ್ರಾಹಕ", "ಲೆಕ್ಕ", "ಇವತ್ತು",
+    "appu", "khate", "rupayi", "baaki", "jama", "paavathi", "balance",
+    "baree", "kotte", "padede", "graahaka", "lekka", "ivattu", "customer",
+    "ondu", "eradu", "mooru", "naalku", "aidu", "aaru", "elu", "entu",
+    "ombattu", "hattu", "nooru", "savira", "laksha",
+    # Tamil (தமிழ்)
+    "கடன்", "கணக்கு", "ரூபாய்", "பாக்கி", "ஜமா", "பணம்", "இருப்பு",
+    "எழுது", "கொடுத்தேன்", "வாங்கினேன்", "வாடிக்கையாளர்", "லெட்ஜர்", "இன்று",
+    "kadan", "kanakku", "rubai", "baaki", "jama", "panam", "iruppu",
+    "ezhuthu", "kuduthen", "vaanginen", "customer", "ledger", "indru",
+    "onnu", "rendu", "moonu", "naalu", "aindhu", "aaru", "ezhu", "ettu",
+    "onbadhu", "pathu", "nooru", "aayiram", "latcham",
+]
+
+# Groq Whisper wants a bare ISO-639-1 code (e.g. "te"), not "te-IN".
+_GROQ_LANGUAGES = {"hi", "en", "te", "kn", "ta", "bn", "mr", "or", "ml"}
+
+
+def _groq_language(language_code: str) -> str:
+    """Pick the primary language from a Gnani-style code list."""
+    for part in language_code.replace(",", "-").split("-"):
+        part = part.strip().lower()
+        if part in _GROQ_LANGUAGES:
+            return part
+    return "hi"
 
 # Reusable client — avoids a fresh TLS handshake on every request (saves ~2-3s).
 _http: httpx.AsyncClient | None = None
@@ -73,7 +121,7 @@ async def transcribe_detailed(
 
     if not settings.GNANI_API_KEY:
         if settings.LLM_API_KEY:
-            text = await _transcribe_groq(audio_bytes, filename)
+            text = await _transcribe_groq(audio_bytes, filename, language_code)
             return {"transcript": text, "engine": "groq-whisper", "language": language_code}
         return {
             "transcript": MOCK_TRANSCRIPT,
@@ -86,7 +134,7 @@ async def transcribe_detailed(
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs","credit","debit","udhaar","khata","bahi"]',
+        "keyterms": json.dumps(KEYTERMS, ensure_ascii=False),
     }
     if previous_text:
         data["previous_text"] = previous_text[-600:]
@@ -152,13 +200,17 @@ async def transcribe(audio_bytes: bytes, filename: str = "audio.wav", language_c
     return result["transcript"]
 
 
-async def _transcribe_groq(audio_bytes: bytes, filename: str) -> str:
+async def _transcribe_groq(audio_bytes: bytes, filename: str, language_code: str = DEFAULT_LANGUAGES) -> str:
     client = _client()
     resp = await client.post(
         f"{settings.LLM_BASE_URL}/audio/transcriptions",
         headers={"Authorization": f"Bearer {settings.LLM_API_KEY}"},
         files={"file": (filename, audio_bytes, _mime_for(filename))},
-        data={"model": "whisper-large-v3", "language": "hi", "response_format": "json"},
+        data={
+            "model": "whisper-large-v3",
+            "language": _groq_language(language_code),
+            "response_format": "json",
+        },
     )
     if resp.status_code >= 400:
         raise STTError(f"Groq Whisper failed ({resp.status_code}): {resp.text[:200]}")

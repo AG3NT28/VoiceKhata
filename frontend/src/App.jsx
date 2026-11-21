@@ -177,6 +177,9 @@ export default function App() {
               <option value="hi-IN,en-IN">Hindi + English</option>
               <option value="indic-auto">Auto-detect</option>
               <option value="hi-IN">Hindi only</option>
+              <option value="te-IN,en-IN">Telugu + English</option>
+              <option value="kn-IN,en-IN">Kannada + English</option>
+              <option value="ta-IN,en-IN">Tamil + English</option>
               <option value="en-IN">English only</option>
             </select>
             <span

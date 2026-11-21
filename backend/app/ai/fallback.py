@@ -10,6 +10,9 @@ import re
 
 from app.ai.extraction import ExtractedIntent
 
+# Match Latin and Indic-script words (transliterated or native script).
+_WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+
 # --- number words -----------------------------------------------------------
 _UNITS = {
     "shunya": 0, "zero": 0,
@@ -40,27 +43,57 @@ _UNITS = {
     "sattar": 70, "seventy": 70,
     "assi": 80, "eighty": 80,
     "nabbe": 90, "ninety": 90,
+    # Telugu
+    "okati": 1, "rendu": 2, "moodu": 3, "naalugu": 4, "aidu": 5, "aaru": 6,
+    "edu": 7, "enimidi": 8, "tommidi": 9, "padi": 10,
+    # Kannada
+    "ondu": 1, "eradu": 2, "mooru": 3, "naalku": 4, "aidu": 5, "aaru": 6,
+    "elu": 7, "entu": 8, "ombattu": 9, "hattu": 10,
+    # Tamil
+    "onnu": 1, "rendu": 2, "moonu": 3, "naalu": 4, "aindhu": 5, "aaru": 6,
+    "ezhu": 7, "ettu": 8, "onbadhu": 9, "pathu": 10,
 }
-_MULTIPLIERS = {"sau": 100, "hundred": 100, "hazaar": 1000, "hajar": 1000, "thousand": 1000, "lakh": 100000}
+_MULTIPLIERS = {
+    "sau": 100, "hundred": 100,
+    "hazaar": 1000, "hajar": 1000, "thousand": 1000,
+    "veyyi": 1000, "savira": 1000, "aayiram": 1000,
+    "lakh": 100000, "laksha": 100000, "latcham": 100000,
+    "vandha": 100, "nooru": 100,
+}
 
 _NUMBER_WORDS = set(_UNITS) | set(_MULTIPLIERS)
 
 # --- intent keywords --------------------------------------------------------
-_CORRECT_WORDS = {"galat", "galti", "correction", "correct", "sudhar", "sudharo", "badlo", "change", "wapas"}
+_CORRECT_WORDS = {
+    "galat", "galti", "correction", "correct", "sudhar", "sudharo", "badlo", "change", "wapas",
+    "tappu", "thappu", "thavaru",
+}
 _PAYMENT_WORDS = {
-    "diya", "diye", "di", "jama", "jamaa", "jamaa", "payment", "pay", "paid",
+    "diya", "diye", "di", "jama", "jamaa", "payment", "pay", "paid",
     "chuka", "chukaya", "chukaaya", "wapas", "return", "de", "dene", "aaya", "aaye",
+    # Telugu / Kannada / Tamil
+    "jama", "kattu", "kattiten", "kattidini", "kotte", "kottidini", "kuduthen",
+    "kuduthuten", "seluthinen", "pavathi", "pavadisu",
 }
 _CREDIT_WORDS = {
     "udhaar", "udhar", "udhaari", "likho", "likh", "likha", "chadha", "chadhao",
     "le", "liya", "gaya", "gaye", "credit", "khata", "khate", "due", "baaki",
+    # Telugu / Kannada / Tamil
+    "appu", "appulu", "kadan", "kadanam", "raayu", "baree", "ezhuthu",
+    "ichchanu", "kotte", "kuduthen", "khate", "kanakku",
 }
-_BALANCE_WORDS = {"balance", "baaki", "baki", "hisaab", "hisab", "kitna", "kitne", "bacha", "bachega"}
-_SUMMARY_WORDS = {"summary", "report", "total", "aaj", "din", "hisab", "hisaab"}
-_STOCK_WORDS = {"stock", "inventory", "maal", "samaan", "stash", "store"}
-_KHATA_WORDS = {"khata", "ledger", "udhaar", "dues", "baaki"}
-_ADD_CUSTOMER_WORDS = {"naya", "nayi", "new", "banao", "banado", "add", "kholo", "khata"}
-_NAME_MARKERS = {"ka", "ko", "ne", "se", "ki", "ke"}
+_BALANCE_WORDS = {
+    "balance", "baaki", "baki", "hisaab", "hisab", "kitna", "kitne", "bacha", "bachega",
+    "entha", "eshtu", "evvalavu", "migilindi", "migilide", "migundhu",
+}
+_SUMMARY_WORDS = {"summary", "report", "total", "aaj", "din", "hisab", "hisaab", "ivattu", "indru", "nay"}
+_STOCK_WORDS = {"stock", "inventory", "maal", "samaan", "stash", "store", "nilva", "satte"}
+_KHATA_WORDS = {"khata", "khate", "ledger", "udhaar", "dues", "baaki", "kanakku"}
+_ADD_CUSTOMER_WORDS = {"naya", "nayi", "new", "banao", "banado", "add", "kholo", "khata", "hadu", "sethu", "seru"}
+_NAME_MARKERS = {
+    "ka", "ko", "ne", "se", "ki", "ke",
+    "ku", "ki", "ge", "kku", "ukku", "oda", "in", "dha",
+}
 _STOPWORDS = (
     _NUMBER_WORDS
     | _CORRECT_WORDS
@@ -72,7 +105,9 @@ _STOPWORDS = (
     | {"rupaye", "rupee", "rupees", "rs", "ka", "ko", "ne", "se", "ki", "ke", "hai", "tha", "the",
        "nahi", "nahin", "abhi", "mera", "mere", "uska", "uske", "ka", "aur", "please", "plz", "kar",
        "karo", "karna", "hain", "ho", "gaya", "gayi", "wala", "wali", "aaj", "kal", "customer",
-       "customers", "banda", "aadmi"}
+       "customers", "banda", "aadmi",
+       "ku", "ge", "kku", "ukku", "oda", "in", "dha", "entha", "eshtu", "evvalavu",
+       "ivattu", "indru", "nay", "chesadu", "madida", "chey", "madu", "pannu", "panu"}
 )
 
 
@@ -88,7 +123,7 @@ def parse_number(text: str) -> int | None:
     total = 0
     current = 0
     found = False
-    for token in re.findall(r"[a-zA-Z]+", text.lower()):
+    for token in _WORD_RE.findall(text.lower()):
         if token in _UNITS:
             current += _UNITS[token]
             found = True
@@ -119,7 +154,7 @@ def _normalise(text: str) -> str:
 
 
 def _extract_name(text: str) -> str | None:
-    tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    tokens = _WORD_RE.findall(text.lower())
     # Strategy 1: name immediately before a marker word (ka/ko/ne/se/ke/ki)
     for i, token in enumerate(tokens):
         if token in _NAME_MARKERS and i > 0:
@@ -158,7 +193,7 @@ def _is_add_customer_utterance(tokens: set[str], amount: int | None) -> bool:
 def parse_text(text: str) -> ExtractedIntent:
     """Parse a Hinglish utterance into a structured intent."""
     norm = _normalise(text)
-    tokens = set(re.findall(r"[a-zA-Z]+", norm))
+    tokens = set(_WORD_RE.findall(norm))
     amount = parse_number(norm)
     name = _extract_name(text)
 

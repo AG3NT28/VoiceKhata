@@ -39,3 +39,7 @@ logs/
 
 # Local test audio
 backend/sample.wav
+
+# Production static build
+backend/static/
+

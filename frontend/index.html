@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>VoiceKhata</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,7 +62,7 @@
       <p id="codeLookupNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
     </form>
   </section>
-  <section id="profile" class="section"><div class="card profile"><div class="avatarbig">RK</div><h3 style="color:var(--text);font-size:16px;margin-bottom:10px" data-i18n="profile">Profile</h3><div class="form-row"><input value="Ramesh Kumar" aria-label="Name" data-i18n-aria-label="name"/></div><div class="form-row"><input value="ramesh@voicekhata.in" aria-label="Email" data-i18n-aria-label="email"/></div><div class="form-row"><input value="+91 98765 43210" aria-label="Phone number" data-i18n-aria-label="phoneNumber"/></div><div class="form-row"><input value="Ramesh General Store" aria-label="Store name" data-i18n-aria-label="storeName"/></div><div class="form-row"><input value="MG Road, Pune" aria-label="Address" data-i18n-aria-label="address"/></div><div class="language-setting"><label id="languageLabel" data-i18n="language">Language</label><details id="languageDropdown" class="language-dropdown" aria-labelledby="languageLabel"><summary><span id="languageSelectedLabel">English</span><svg class="language-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></summary><div class="language-options" role="group" aria-labelledby="languageLabel"><button type="button" class="language-option" data-language="en" aria-pressed="true">English</button><button type="button" class="language-option" data-language="hi" aria-pressed="false">हिन्दी</button><button type="button" class="language-option" data-language="bn" aria-pressed="false">বাংলা</button><button type="button" class="language-option" data-language="mr" aria-pressed="false">मराठी</button><button type="button" class="language-option" data-language="te" aria-pressed="false">తెలుగు</button><button type="button" class="language-option" data-language="ta" aria-pressed="false">தமிழ்</button><button type="button" class="language-option" data-language="or" aria-pressed="false">ଓଡ଼ିଆ</button><button type="button" class="language-option" data-language="ml" aria-pressed="false">മലയാളം</button></div></details></div><p id="languageNotice" class="form-notice" role="status" aria-live="polite" hidden></p><button style="width:100%" data-i18n="saveChanges">Save Changes</button></div></section>
+  <section id="profile" class="section"><div class="card profile"><div class="avatarbig">RK</div><h3 style="color:var(--text);font-size:16px;margin-bottom:10px" data-i18n="profile">Profile</h3><div class="form-row"><input value="Ramesh Kumar" aria-label="Name" data-i18n-aria-label="name"/></div><div class="form-row"><input value="ramesh@voicekhata.in" aria-label="Email" data-i18n-aria-label="email"/></div><div class="form-row"><input value="+91 98765 43210" aria-label="Phone number" data-i18n-aria-label="phoneNumber"/></div><div class="form-row"><input value="Ramesh General Store" aria-label="Store name" data-i18n-aria-label="storeName"/></div><div class="form-row"><input value="MG Road, Pune" aria-label="Address" data-i18n-aria-label="address"/></div><div class="language-setting"><label id="languageLabel" data-i18n="language">Language</label><details id="languageDropdown" class="language-dropdown" aria-labelledby="languageLabel"><summary><span id="languageSelectedLabel">English</span><svg class="language-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></summary><div class="language-options" role="group" aria-labelledby="languageLabel"><button type="button" class="language-option" data-language="en" aria-pressed="true">English</button><button type="button" class="language-option" data-language="hi" aria-pressed="false">हिन्दी</button><button type="button" class="language-option" data-language="bn" aria-pressed="false">বাংলা</button><button type="button" class="language-option" data-language="mr" aria-pressed="false">मराठी</button><button type="button" class="language-option" data-language="te" aria-pressed="false">తెలుగు</button><button type="button" class="language-option" data-language="kn" aria-pressed="false">ಕನ್ನಡ</button><button type="button" class="language-option" data-language="ta" aria-pressed="false">தமிழ்</button><button type="button" class="language-option" data-language="or" aria-pressed="false">ଓଡ଼ିଆ</button><button type="button" class="language-option" data-language="ml" aria-pressed="false">മലയാളം</button></div></details></div><p id="languageNotice" class="form-notice" role="status" aria-live="polite" hidden></p><button style="width:100%" data-i18n="saveChanges">Save Changes</button></div></section>
   <section id="bills" class="section">
     <div class="card report-overview">
       <div>
@@ -82,10 +82,12 @@
         <button type="button" id="addInventoryButton" data-i18n="add">+ Add</button>
       </div>
       <p id="inventoryNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
-      <table class="table">
-        <thead><tr><th data-i18n="item">Item</th><th data-i18n="stock">Stock</th><th data-i18n="price">Price</th><th data-i18n="status">Status</th></tr></thead>
-        <tbody id="invTable"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th data-i18n="item">Item</th><th data-i18n="stock">Stock</th><th data-i18n="price">Price</th><th data-i18n="status">Status</th></tr></thead>
+          <tbody id="invTable"></tbody>
+        </table>
+      </div>
     </div>
     <div class="card price-compare-card">
       <div class="inv-bar">

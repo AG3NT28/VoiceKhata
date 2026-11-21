@@ -194,6 +194,36 @@ const translations={
     expenseChartDescription:'ఖర్చులు: అద్దె 35%, జీతం 28%, యుటిలిటీలు 15%, మార్కెటింగ్ 12%, ఇతరాలు 10%.',
     rent:'అద్దె',salary:'జీతం',utilities:'యుటిలిటీలు',marketing:'మార్కెటింగ్',other:'ఇతరాలు'
   },
+  kn:{
+    home:'ಮುಖಪುಟ',dashboard:'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',totalSales:'ಒಟ್ಟು ಮಾರಾಟ',purchases:'ಖರೀದಿಗಳು',profit:'ಲಾಭ',expenses:'ಖರ್ಚುಗಳು',
+    creditGiven:'ನೀಡಿದ ಸಾಲ',creditTaken:'ಪಡೆದ ಸಾಲ',creditTotals:'ಗ್ರಾಹಕರ ಸಾಲದ ಒಟ್ಟು',summary:'ಸಾರಾಂಶ',
+    summaryHint:'ವಿವರವಾದ ವರದಿಗಳು ಮತ್ತು ವಹಿವಾಟುಗಳಿಗಾಗಿ ಬಿಲ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ.',profile:'ಪ್ರೊಫೈಲ್',language:'ಭಾಷೆ',saveChanges:'ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ',
+    name:'ಹೆಸರು',email:'ಇಮೇಲ್',phoneNumber:'ಫೋನ್ ಸಂಖ್ಯೆ',storeName:'ಅಂಗಡಿಯ ಹೆಸರು',address:'ವಿಳಾಸ',openProfile:'ಪ್ರೊಫೈಲ್ ತೆರೆಯಿರಿ',
+    bills:'ಬಿಲ್‌ಗಳು',reportsSummary:'ವರದಿಗಳ ಸಾರಾಂಶ',reportsLine:'ಒಟ್ಟು ಮಾರಾಟ ₹4.82L · ಖರೀದಿ ₹3.11L · ಲಾಭ ₹1.71L',sales:'ಮಾರಾಟ',purchase:'ಖರೀದಿ',expense:'ಖರ್ಚು',
+    searchSalesBills:'ಮಾರಾಟದ ಬಿಲ್‌ಗಳನ್ನು ಹುಡುಕಿ...',searchPurchaseBills:'ಖರೀದಿ ಬಿಲ್‌ಗಳನ್ನು ಹುಡುಕಿ...',addBill:'+ ಬಿಲ್ ಸೇರಿಸಿ',
+    bill:'ಬಿಲ್',date:'ದಿನಾಂಕ',customer:'ಗ್ರಾಹಕ',vendor:'ಮಾರಾಟಗಾರ',amountShort:'ಮೊತ್ತ',status:'ಸ್ಥಿತಿ',paid:'ಪಾವತಿಸಲಾಗಿದೆ',pending:'ಬಾಕಿ',
+    search:'ಹುಡುಕಿ...',add:'+ ಸೇರಿಸಿ',item:'ವಸ್ತು',stock:'ಸ್ಟಾಕ್',price:'ಬೆಲೆ',
+    customers:'ಗ್ರಾಹಕರು',savedCustomerEntries:'ನೀವು ಉಳಿಸಿದ ಗ್ರಾಹಕರ ಸಾಲದ ನಮೂದುಗಳು',searchCustomers:'ಹೆಸರು ಅಥವಾ ಫೋನ್‌ನಿಂದ ಹುಡುಕಿ',
+    searchButton:'ಹುಡುಕಿ',addCustomer:'ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ',addCustomerTitle:'ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ',editCustomerTitle:'ಗ್ರಾಹಕರ ವಿವರಗಳನ್ನು ಸಂಪಾದಿಸಿ',
+    customerFormIntro:'ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ ಮತ್ತು ಸಾಲವನ್ನು ದಾಖಲಿಸಿ.',customerName:'ಗ್ರಾಹಕರ ಹೆಸರು',creditType:'ಸಾಲದ ಪ್ರಕಾರ',
+    amount:'ಮೊತ್ತ',amountGiven:'ಮೊತ್ತ (ನೀಡಿದ ಸಾಲ)',amountTaken:'ಮೊತ್ತ (ಪಡೆದ ಸಾಲ)',dateTime:'ದಿನಾಂಕ ಮತ್ತು ಸಮಯ',attachBill:'ಬಿಲ್ ಲಗತ್ತಿಸಿ',saveCustomer:'ಗ್ರಾಹಕರನ್ನು ಉಳಿಸಿ',updateCustomer:'ಗ್ರಾಹಕರನ್ನು ನವೀಕರಿಸಿ',
+    cancel:'ರದ್ದುಮಾಡಿ',noCustomers:'ಇನ್ನೂ ಗ್ರಾಹಕರಿಲ್ಲ. ಸಾಲವನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಲು ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ.',
+    noCustomerMatches:'ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ಗ್ರಾಹಕರು ಹೊಂದಿಕೆಯಾಗಲಿಲ್ಲ.',customerStorageLoadError:'ಉಳಿಸಿದ ಗ್ರಾಹಕರನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಪಟ್ಟಿಯನ್ನು ಮರುಹೊಂದಿಸಲಾಗಿದೆ. ನೀವು ಮತ್ತೆ ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಬಹುದು.',
+    customerStorageUnavailable:'ಗ್ರಾಹಕರ ಸಂಗ್ರಹ ಲಭ್ಯವಿಲ್ಲ. ಉಳಿಸುವ ಮೊದಲು ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಿ.',
+    customerStorageSaveError:'ಬ್ರೌಸರ್ ಸಂಗ್ರಹದಲ್ಲಿ ಗ್ರಾಹಕರನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಸಂಗ್ರಹವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+    invalidCustomer:'ಸರಿಯಾದ ಹೆಸರು, ಫೋನ್ ಸಂಖ್ಯೆ, ಮೊತ್ತ ಮತ್ತು ದಿನಾಂಕವನ್ನು ನಮೂದಿಸಿ.',customerMissing:'ಈ ಗ್ರಾಹಕರು ಈಗ ಲಭ್ಯವಿಲ್ಲ. ಗ್ರಾಹಕರ ಪಟ್ಟಿಗೆ ಹಿಂತಿರುಗಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+    languageLoadError:'ಉಳಿಸಿದ ಭಾಷೆಯನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಇಂಗ್ಲಿಷ್ ಬಳಸಲಾಗುತ್ತಿದೆ.',
+    languageSaveError:'ಈ ಅಧಿವೇಶನಕ್ಕೆ ಭಾಷೆ ಬದಲಾಗಿದೆ, ಆದರೆ ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
+    stockOut:'ಮುಗಿದಿದೆ',stockLow:'ಕಡಿಮೆ',inStock:'ಸ್ಟಾಕ್‌ನಲ್ಲಿದೆ',
+    reportSalesTitle:'ಮಾರಾಟದ ವರದಿ',reportPurchTitle:'ಖರೀದಿ ವರದಿ',reportExpTitle:'ಖರ್ಚಿನ ವರದಿ',
+    reportSalesPlaceholder:'ವಿವರವಾದ ಮಾರಾಟದ ವರದಿ.',reportPurchPlaceholder:'ವಿವರವಾದ ಖರೀದಿ ವರದಿ.',reportExpPlaceholder:'ವಿವರವಾದ ಖರ್ಚಿನ ವರದಿ.',
+    viewReport:'ವರದಿ ನೋಡಿ',reportTitle:'ವ್ಯಾಪಾರ ವರದಿ',reportSubtitle:'ಮಾರಾಟ, ಖರೀದಿ, ಲಾಭ ಮತ್ತು ಖರ್ಚುಗಳು',backToBills:'ಬಿಲ್‌ಗಳಿಗೆ ಹಿಂತಿರುಗಿ',
+    monthlyComparison:'ಮಾಸಿಕ ಮಾರಾಟ ಮತ್ತು ಖರೀದಿ',chartThousands:'ಮಾಸಿಕ ಒಟ್ಟು (₹ ಸಾವಿರ)',monthlyChartDescription:'ಜನವರಿಯಿಂದ ಜೂನ್‌ವರೆಗೆ ಮಾರಾಟ ಮತ್ತು ಖರೀದಿಯ ಮಾಸಿಕ ಹೋಲಿಕೆ.',
+    profitTrend:'ಲಾಭದ ಪ್ರವೃತ್ತಿ',profitThousands:'ಮಾಸಿಕ ಲಾಭ (₹ ಸಾವಿರ)',profitChartDescription:'ಜನವರಿಯಿಂದ ಜೂನ್‌ವರೆಗೆ ಮಾಸಿಕ ಲಾಭದ ಪ್ರವೃತ್ತಿ.',
+    expenseBreakdown:'ಖರ್ಚಿನ ವಿವರ',expenseByCategory:'ವರ್ಗದ ಪ್ರಕಾರ ಪಾಲು',
+    expenseChartDescription:'ಖರ್ಚುಗಳು: ಬಾಡಿಗೆ 35%, ಸಂಬಳ 28%, ಉಪಯುಕ್ತತೆಗಳು 15%, ಮಾರ್ಕೆಟಿಂಗ್ 12%, ಇತರೆ 10%.',
+    rent:'ಬಾಡಿಗೆ',salary:'ಸಂಬಳ',utilities:'ಉಪಯುಕ್ತತೆಗಳು',marketing:'ಮಾರ್ಕೆಟಿಂಗ್',other:'ಇತರೆ'
+  },
   ta:{
     home:'முகப்பு',dashboard:'டாஷ்போர்டு',totalSales:'மொத்த விற்பனை',purchases:'கொள்முதல்',profit:'லாபம்',expenses:'செலவுகள்',
     creditGiven:'கொடுத்த கடன்',creditTaken:'பெற்ற கடன்',creditTotals:'வாடிக்கையாளர் கடன் மொத்தம்',summary:'சுருக்கம்',
@@ -239,7 +269,7 @@ const translations={
     stock:'സ്റ്റോക്ക്',bills:'ബില്ലുകൾ',saveCustomer:'ഉപഭോക്താവിനെ സേവ് ചെയ്യുക',cancel:'റദ്ദാക്കുക'
   },
 };
-const languageLocales={en:'en-IN',hi:'hi-IN',bn:'bn-IN',mr:'mr-IN',te:'te-IN',ta:'ta-IN',or:'or-IN',ml:'ml-IN'};
+const languageLocales={en:'en-IN',hi:'hi-IN',bn:'bn-IN',mr:'mr-IN',te:'te-IN',kn:'kn-IN',ta:'ta-IN',or:'or-IN',ml:'ml-IN'};
 let currentLanguage='en';
 let currentSection='dashboard';
 function t(key){
@@ -949,7 +979,7 @@ function updateReportsFromSummary(summary){
 const originalApplyLanguage=applyLanguage;
 applyLanguage=function(language){
   originalApplyLanguage(language);
-  const map={en:'en-IN',hi:'hi-IN,en-IN',bn:'bn-IN,en-IN',mr:'mr-IN,en-IN',te:'te-IN,en-IN',ta:'ta-IN,en-IN',or:'or-IN,en-IN',ml:'ml-IN,en-IN'};
+  const map={en:'en-IN',hi:'hi-IN,en-IN',bn:'bn-IN,en-IN',mr:'mr-IN,en-IN',te:'te-IN,en-IN',kn:'kn-IN,en-IN',ta:'ta-IN,en-IN',or:'or-IN,en-IN',ml:'ml-IN,en-IN'};
   sttLanguage=map[currentLanguage]||'hi-IN,en-IN';
 };
 
