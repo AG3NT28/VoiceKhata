@@ -18,9 +18,10 @@ export function getState() {
   return fetch(`${API_BASE}/voice/state`).then(toJson);
 }
 
-export function sendAudio(wavBlob) {
+export function sendAudio(wavBlob, languageCode = 'hi-IN,en-IN') {
   const form = new FormData();
   form.append('audio', wavBlob, 'audio.wav');
+  form.append('language_code', languageCode);
   return fetch(`${API_BASE}/voice/command`, { method: 'POST', body: form }).then(toJson);
 }
 
@@ -34,4 +35,22 @@ export function sendText(text) {
 
 export function undoLast() {
   return fetch(`${API_BASE}/voice/undo`, { method: 'POST' }).then(toJson);
+}
+export async function speakText(text, language = 'hi-en') {
+  const res = await fetch(`${API_BASE}/voice/speak`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, language }),
+  });
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try { const b = await res.json(); detail = b.detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.onended = () => URL.revokeObjectURL(url);
+  await audio.play();
+  return audio;
 }

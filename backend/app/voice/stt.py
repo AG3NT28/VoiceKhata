@@ -9,6 +9,7 @@ canned transcript when neither is available (offline demo mode).
 """
 from __future__ import annotations
 
+import asyncio
 import httpx
 
 from app.config import settings
@@ -55,11 +56,16 @@ def _mime_for(filename: str) -> str:
     }.get(ext, "audio/wav")
 
 
+_RETRYABLE = {429, 500, 502, 503, 504}
+
+
 async def transcribe_detailed(
     audio_bytes: bytes,
     filename: str = "audio.wav",
     language_code: str = DEFAULT_LANGUAGES,
     output_format: str = "transliterate",
+    previous_text: str | None = None,
+    max_retries: int = 3,
 ) -> dict:
     """Transcribe audio and return the provider response plus engine metadata."""
     if not audio_bytes:
@@ -80,43 +86,64 @@ async def transcribe_detailed(
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs"]',
+        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs","credit","debit","udhaar","khata","bahi"]',
     }
+    if previous_text:
+        data["previous_text"] = previous_text[-600:]
     files = {"audio_file": (filename, audio_bytes, _mime_for(filename))}
 
     client = _client()
-    resp = await client.post(
-        GNANI_STT_URL,
-        headers={"X-API-Key-ID": settings.GNANI_API_KEY},
-        files=files,
-        data=data,
-    )
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        try:
+            resp = await client.post(
+                GNANI_STT_URL,
+                headers={"X-API-Key-ID": settings.GNANI_API_KEY},
+                files=files,
+                data=data,
+            )
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as exc:
+            last_exc = STTError(f"Network error talking to Gnani: {exc}")
+            await asyncio.sleep(0.5 * (2 ** attempt))
+            continue
 
-    if resp.status_code == 401:
-        raise STTError("Gnani rejected the API key (401). Check GNANI_API_KEY.")
-    if resp.status_code == 402:
-        raise STTError("Gnani account has insufficient credit (402).")
-    if resp.status_code == 403:
-        raise STTError(f"Gnani key lacks the STT scope (403): {resp.text[:200]}")
-    if resp.status_code == 429:
-        raise STTError("Gnani rate limit hit (429). Wait a moment and retry.")
-    if resp.status_code >= 400:
-        raise STTError(f"Gnani STT failed ({resp.status_code}): {resp.text[:300]}")
+        if resp.status_code in _RETRYABLE:
+            last_exc = STTError(f"Gnani STT temporary failure ({resp.status_code}): {resp.text[:200]}")
+            await asyncio.sleep(0.5 * (2 ** attempt))
+            continue
 
-    body = resp.json()
-    if not body.get("success", True):
-        err = body.get("error") or {}
-        raise STTError(f"Gnani STT error {err.get('type')}: {err.get('message')}")
+        if resp.status_code == 401:
+            raise STTError("Gnani rejected the API key (401). Check GNANI_API_KEY.")
+        if resp.status_code == 402:
+            raise STTError("Gnani account has insufficient credit (402).")
+        if resp.status_code == 403:
+            raise STTError(f"Gnani key lacks the STT scope (403): {resp.text[:200]}")
+        if resp.status_code == 422:
+            raise STTError(f"Gnani validation error (422): {resp.text[:300]}")
+        if resp.status_code >= 400:
+            raise STTError(f"Gnani STT failed ({resp.status_code}): {resp.text[:300]}")
 
-    return {
-        "transcript": (body.get("transcript") or "").strip(),
-        "engine": "gnani-prisma-v3",
-        "model": body.get("model", "prisma-v3.0"),
-        "language": body.get("detected_language_code", language_code),
-        "processing_time": body.get("processing_time"),
-        "latency": body.get("end_to_end_latency"),
-        "request_id": body.get("request_id"),
-    }
+        body = resp.json()
+        if not body.get("success", True):
+            err = body.get("error") or {}
+            raise STTError(f"Gnani STT error {err.get('type')}: {err.get('message')}")
+
+        truncated = bool(body.get("truncated"))
+        result = {
+            "transcript": (body.get("transcript") or "").strip(),
+            "engine": "gnani-prisma-v3",
+            "model": body.get("model", "prisma-v3.0"),
+            "language": body.get("detected_language_code", language_code),
+            "processing_time": body.get("processing_time"),
+            "latency": body.get("end_to_end_latency"),
+            "request_id": body.get("request_id"),
+            "truncated": truncated,
+        }
+        if truncated:
+            result["warning"] = "Transcript was truncated (audio too long). Split the recording."
+        return result
+
+    raise last_exc or STTError("Gnani STT failed after retries.")
 
 
 async def transcribe(audio_bytes: bytes, filename: str = "audio.wav", language_code: str = DEFAULT_LANGUAGES) -> str:
@@ -133,105 +160,6 @@ async def _transcribe_groq(audio_bytes: bytes, filename: str) -> str:
         files={"file": (filename, audio_bytes, _mime_for(filename))},
         data={"model": "whisper-large-v3", "language": "hi", "response_format": "json"},
     )
-    if resp.status_code >= 400:
-        raise STTError(f"Groq Whisper failed ({resp.status_code}): {resp.text[:200]}")
-    return (resp.json().get("text") or "").strip()
-
-
-class STTError(RuntimeError):
-    """Raised when the speech service rejects or fails a request."""
-
-
-def _mime_for(filename: str) -> str:
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "wav"
-    return {
-        "wav": "audio/wav",
-        "mp3": "audio/mpeg",
-        "ogg": "audio/ogg",
-        "flac": "audio/flac",
-        "aac": "audio/aac",
-        "m4a": "audio/mp4",
-    }.get(ext, "audio/wav")
-
-
-async def transcribe_detailed(
-    audio_bytes: bytes,
-    filename: str = "audio.wav",
-    language_code: str = DEFAULT_LANGUAGES,
-    output_format: str = "transliterate",
-) -> dict:
-    """Transcribe audio and return the provider response plus engine metadata."""
-    if not audio_bytes:
-        raise STTError("Empty audio payload")
-
-    if not settings.GNANI_API_KEY:
-        if settings.LLM_API_KEY:
-            text = await _transcribe_groq(audio_bytes, filename)
-            return {"transcript": text, "engine": "groq-whisper", "language": language_code}
-        return {
-            "transcript": MOCK_TRANSCRIPT,
-            "engine": "mock",
-            "language": language_code,
-            "note": "GNANI_API_KEY not set - returning mock transcript",
-        }
-
-    data = {
-        "model": "prisma-v3.0",
-        "language_code": language_code,
-        "format": output_format,
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer","ek","do","teen","char","paanch","chhe","saat","aath","nau","das","sau","hazaar","lakh","rs"]',
-    }
-    files = {"audio_file": (filename, audio_bytes, _mime_for(filename))}
-
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        resp = await client.post(
-            GNANI_STT_URL,
-            headers={"X-API-Key-ID": settings.GNANI_API_KEY},
-            files=files,
-            data=data,
-        )
-
-    if resp.status_code == 401:
-        raise STTError("Gnani rejected the API key (401). Check GNANI_API_KEY.")
-    if resp.status_code == 402:
-        raise STTError("Gnani account has insufficient credit (402).")
-    if resp.status_code == 403:
-        raise STTError(f"Gnani key lacks the STT scope (403): {resp.text[:200]}")
-    if resp.status_code == 429:
-        raise STTError("Gnani rate limit hit (429). Wait a moment and retry.")
-    if resp.status_code >= 400:
-        raise STTError(f"Gnani STT failed ({resp.status_code}): {resp.text[:300]}")
-
-    body = resp.json()
-    if not body.get("success", True):
-        err = body.get("error") or {}
-        raise STTError(f"Gnani STT error {err.get('type')}: {err.get('message')}")
-
-    return {
-        "transcript": (body.get("transcript") or "").strip(),
-        "engine": "gnani-prisma-v3",
-        "model": body.get("model", "prisma-v3.0"),
-        "language": body.get("detected_language_code", language_code),
-        "processing_time": body.get("processing_time"),
-        "latency": body.get("end_to_end_latency"),
-        "request_id": body.get("request_id"),
-    }
-
-
-async def transcribe(audio_bytes: bytes, filename: str = "audio.wav", language_code: str = DEFAULT_LANGUAGES) -> str:
-    """Backwards-compatible helper that returns only the transcript string."""
-    result = await transcribe_detailed(audio_bytes, filename, language_code)
-    return result["transcript"]
-
-
-async def _transcribe_groq(audio_bytes: bytes, filename: str) -> str:
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
-            f"{settings.LLM_BASE_URL}/audio/transcriptions",
-            headers={"Authorization": f"Bearer {settings.LLM_API_KEY}"},
-            files={"file": (filename, audio_bytes, _mime_for(filename))},
-            data={"model": "whisper-large-v3", "language": "hi", "response_format": "json"},
-        )
     if resp.status_code >= 400:
         raise STTError(f"Groq Whisper failed ({resp.status_code}): {resp.text[:200]}")
     return (resp.json().get("text") or "").strip()

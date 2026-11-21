@@ -1,7 +1,8 @@
 """Prototype-facing voice API: audio in, ledger action out."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from app.khata.ledger import add_credit, record_payment
 from app.utils.dates import today_in_tz
 from app.voice.pipeline import demo_state, handle_transcript
 from app.voice.stt import STTError, transcribe_detailed
+from app.voice.tts import TTSError, synthesize
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -21,6 +23,11 @@ DEMO_SHOP_NAME = "Demo Kirana Store"
 
 class TextCommand(BaseModel):
     text: str
+
+
+class SpeakRequest(BaseModel):
+    text: str
+    language: str = "hi-en"
 
 
 async def get_demo_shop(db: AsyncSession) -> Shop:
@@ -46,20 +53,24 @@ async def get_demo_shop(db: AsyncSession) -> Shop:
 
 
 @router.post("/transcribe")
-async def transcribe_only(audio: UploadFile = File(...)):
+async def transcribe_only(audio: UploadFile = File(...), language_code: str = Form("hi-IN,en-IN")):
     data = await audio.read()
     try:
-        return await transcribe_detailed(data, audio.filename or "audio.wav")
+        return await transcribe_detailed(data, audio.filename or "audio.wav", language_code=language_code)
     except STTError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 
 
 @router.post("/command")
-async def voice_command(audio: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+async def voice_command(
+    audio: UploadFile = File(...),
+    language_code: str = Form("hi-IN,en-IN"),
+    db: AsyncSession = Depends(get_db),
+):
     shop = await get_demo_shop(db)
     data = await audio.read()
     try:
-        stt = await transcribe_detailed(data, audio.filename or "audio.wav")
+        stt = await transcribe_detailed(data, audio.filename or "audio.wav", language_code=language_code)
     except STTError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 
@@ -98,3 +109,14 @@ async def undo_last(db: AsyncSession = Depends(get_db)):
         "reply_text": "Undo ho gaya: %s Rs%.0f hata diya." % (last.type.value, last.amount_paise / 100),
         "transaction_id": str(last.id),
     }
+
+
+@router.post("/speak")
+async def speak_text(payload: SpeakRequest):
+    try:
+        audio = await synthesize(payload.text, language=payload.language)
+    except TTSError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    if audio is None:
+        raise HTTPException(status_code=503, detail="Gnani TTS not configured (set GNANI_API_KEY).")
+    return Response(content=audio, media_type="audio/wav")

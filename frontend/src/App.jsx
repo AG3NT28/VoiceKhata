@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getState, sendAudio, sendText, undoLast } from './services/api';
+import { getState, sendAudio, sendText, undoLast, speakText } from './services/api';
 import { VoiceRecorder, isRecordingSupported, speak, stopSpeaking } from './services/audio';
 
 const INTENT_META = {
@@ -33,6 +33,7 @@ export default function App() {
   const [ttsOn, setTtsOn] = useState(true);
   const [typed, setTyped] = useState('');
   const [processingMs, setProcessingMs] = useState(null);
+  const [language, setLanguage] = useState('hi-IN,en-IN');
 
   const recorderRef = useRef(null);
   const resultRef = useRef(null);
@@ -61,7 +62,18 @@ export default function App() {
   const run = async (promise) => {
     const data = await promise;
     setResult(data);
-    if (data.reply_text && ttsOn) speak(data.reply_text);
+    if (data.reply_text && ttsOn) {
+      let played = false;
+      try {
+        await Promise.race([
+          speakText(data.reply_text, 'hi-en').then(() => { played = true; }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('tts timeout')), 4000)),
+        ]);
+      } catch {
+        /* fall through to browser TTS */
+      }
+      if (!played) speak(data.reply_text);
+    }
     await refresh();
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
   };
@@ -90,7 +102,7 @@ export default function App() {
     try {
       const wav = await recorderRef.current?.stop();
       if (!wav) throw new Error('Koi audio capture nahi hua, dobara try karein.');
-      await run(sendAudio(wav));
+      await run(sendAudio(wav, language));
       setProcessingMs(Date.now() - startedAt);
     } catch (err) {
       setError(err.message);
@@ -157,6 +169,16 @@ export default function App() {
             >
               {ttsOn ? '🔊 Voice reply on' : '🔇 Voice reply off'}
             </button>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 outline-none focus:border-amber-400"
+            >
+              <option value="hi-IN,en-IN">Hindi + English</option>
+              <option value="indic-auto">Auto-detect</option>
+              <option value="hi-IN">Hindi only</option>
+              <option value="en-IN">English only</option>
+            </select>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
                 online
@@ -315,7 +337,16 @@ export default function App() {
                       {ttsOn && (
                         <button
                           type="button"
-                          onClick={() => speak(result.reply_text)}
+                          onClick={async () => {
+                            let played = false;
+                            try {
+                              await Promise.race([
+                                speakText(result.reply_text, 'hi-en').then(() => { played = true; }),
+                                new Promise((_, reject) => setTimeout(() => reject(new Error('tts timeout')), 4000)),
+                              ]);
+                            } catch {}
+                            if (!played) speak(result.reply_text);
+                          }}
                           className="mt-2 text-xs font-semibold text-amber-700 underline decoration-amber-300 underline-offset-2"
                         >
                           Dobara sunein
