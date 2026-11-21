@@ -1,13 +1,16 @@
 """Stock API smoke tests against shared SQLite DB."""
 from __future__ import annotations
 
+import uuid
+
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -16,7 +19,10 @@ async def client():
 
 async def _auth_headers(client: AsyncClient) -> dict:
     res = await client.post("/auth/demo")
-    assert res.status_code == 200
+    if res.status_code != 200:
+        # Fallback when demo auth is disabled
+        res = await client.post("/auth/email", json={"email": f"stock-test-{uuid.uuid4().hex[:8]}@shop.test"})
+    assert res.status_code == 200, res.text
     token = res.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
@@ -38,18 +44,19 @@ async def test_stock_list_and_summary(client):
 @pytest.mark.asyncio
 async def test_stock_add_remove_adjust(client):
     headers = await _auth_headers(client)
+    name = f"Test Atta Pack {uuid.uuid4().hex[:8]}"
     created = await client.post(
         "/stock",
         headers=headers,
         json={
-            "name": "Test Atta Pack",
+            "name": name,
             "category": "groceries",
             "quantity": 10,
             "unit_price_paise": 5000,
             "minimum_quantity": 3,
         },
     )
-    assert created.status_code == 201
+    assert created.status_code == 201, created.text
     item = created.json()
     item_id = item["id"]
     assert item["quantity"] == 10

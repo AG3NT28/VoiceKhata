@@ -200,16 +200,24 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
 
     # ---- ADD_CREDIT / RECORD_PAYMENT --------------------------------------
     if intent in ("ADD_CREDIT", "RECORD_PAYMENT"):
+        # Hard guards from edge-case invariants (never guess / never commit invalid)
+        if entities.get("negation"):
+            result.update(
+                needs_clarification=True,
+                reply_text=intent_obj.clarification_question
+                or "Negation mili — payment/credit commit nahi kiya. Confirm karke boliye.",
+            )
+            return result
         if amount is None:
             result.update(
                 needs_clarification=True,
-                reply_text="Kitne rupaye? Amount dobara boliye.",
+                reply_text=intent_obj.clarification_question or "Kitne rupaye? Amount dobara boliye.",
             )
             return result
         if not name:
             result.update(
                 needs_clarification=True,
-                reply_text="Kiska khata? Customer ka naam boliye.",
+                reply_text=intent_obj.clarification_question or "Kiska khata? Customer ka naam boliye.",
             )
             return result
 
@@ -234,7 +242,10 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
 
         amount_paise = rupees_to_paise(float(amount))
         if amount_paise <= 0:
-            result.update(needs_clarification=True, reply_text="Amount zero se zyada hona chahiye.")
+            result.update(
+                needs_clarification=True,
+                reply_text="Amount zero / invalid hai — entry nahi ki.",
+            )
             return result
 
         txn_date = today_in_tz()
@@ -337,6 +348,38 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
         result["reply_text"] = (
             f"Stock summary: {len(items)} items, {len(low)} low stock. "
             f"Kam: {low_line}."
+        )
+        return result
+
+    # ---- FIND_WHOLESALE -----------------------------------------------------
+    if intent == "FIND_WHOLESALE":
+        from app.marketplace.orchestrator import search_marketplace
+
+        query = (entities.get("query") or transcript).strip()
+        search = await search_marketplace(
+            db,
+            shop_id=shop_id,
+            query=query,
+            purchase_type=entities.get("purchase_type") or "wholesale",
+        )
+        offers = search.offers[:3]
+        result["marketplace"] = search.model_dump(mode="json")
+        if not offers:
+            result["reply_text"] = (
+                "Koi wholesale offer nahi mila. Marketplace tab me search karke dekhiye."
+            )
+            return result
+        lines = []
+        for idx, offer in enumerate(offers, start=1):
+            unit = offer.effective_unit_rupees
+            unit_txt = f"₹{unit:.2f}/{offer.unit}" if unit is not None else "price TBD"
+            lines.append(f"{idx}) {offer.supplier_name or offer.provider_name}: {unit_txt}")
+        best = offers[0]
+        result["reply_text"] = (
+            f"{len(offers)} wholesale offers mile. "
+            f"Sabse sasta unit rate: {best.supplier_name or best.provider_name}. "
+            + " ".join(lines)
+            + " Marketplace tab me open karke supplier pe ja sakte ho. Final price supplier site pe confirm karein."
         )
         return result
 

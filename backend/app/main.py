@@ -12,6 +12,9 @@ from app.api.transactions import router as transactions_router
 from app.api.voice import get_demo_shop, router as voice_router
 from app.database.db import SessionLocal, engine
 from app.database.models import Base
+from app.marketplace import router as marketplace_router
+from app.marketplace import models as marketplace_models  # noqa: F401 — register tables
+from app.marketplace.seed import seed_marketplace
 from app.stock.service import seed_stock_if_empty
 from app.voice.websocket import router as ws_router
 
@@ -26,6 +29,7 @@ async def lifespan(app: FastAPI):
         shop = await get_demo_shop(db)
         await seed_inventory_if_empty(db, shop)
         await seed_stock_if_empty(db, shop.id)
+        await seed_marketplace(db, shop_id=shop.id)
     yield
     await close_client()
 
@@ -40,6 +44,7 @@ app.include_router(transactions_router)
 app.include_router(reports_router)
 app.include_router(inventory_router)
 app.include_router(stock_router)
+app.include_router(marketplace_router)
 app.include_router(voice_router)
 app.include_router(ws_router)
 

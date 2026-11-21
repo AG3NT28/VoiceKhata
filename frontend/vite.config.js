@@ -1,19 +1,23 @@
 import { defineConfig } from 'vite';
 
+const backend = 'http://127.0.0.1:8000';
+
 export default defineConfig({
   server: {
     port: 5173,
+    host: '127.0.0.1',
     open: true,
     proxy: {
-      '/voice': 'http://127.0.0.1:8000',
-      '/ws': { target: 'ws://127.0.0.1:8000', ws: true },
-      '/customers': 'http://127.0.0.1:8000',
-      '/transactions': 'http://127.0.0.1:8000',
-      '/reports': 'http://127.0.0.1:8000',
-      '/inventory': 'http://127.0.0.1:8000',
-      '/stock': 'http://127.0.0.1:8000',
-      '/auth': 'http://127.0.0.1:8000',
-      '/health': 'http://127.0.0.1:8000',
+      '/voice': { target: backend, changeOrigin: true },
+      '/ws': { target: backend, ws: true, changeOrigin: true },
+      '/customers': { target: backend, changeOrigin: true },
+      '/transactions': { target: backend, changeOrigin: true },
+      '/reports': { target: backend, changeOrigin: true },
+      '/inventory': { target: backend, changeOrigin: true },
+      '/stock': { target: backend, changeOrigin: true },
+      '/auth': { target: backend, changeOrigin: true },
+      '/health': { target: backend, changeOrigin: true },
+      '/api': { target: backend, changeOrigin: true },
     },
   },
 });

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
 <title>VoiceKhata</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,7 +62,7 @@
       <p id="codeLookupNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
     </form>
   </section>
-  <section id="profile" class="section"><div class="card profile"><div class="avatarbig">RK</div><h3 style="color:var(--text);font-size:16px;margin-bottom:10px" data-i18n="profile">Profile</h3><div class="form-row"><input value="Ramesh Kumar" aria-label="Name" data-i18n-aria-label="name"/></div><div class="form-row"><input value="ramesh@voicekhata.in" aria-label="Email" data-i18n-aria-label="email"/></div><div class="form-row"><input value="+91 98765 43210" aria-label="Phone number" data-i18n-aria-label="phoneNumber"/></div><div class="form-row"><input value="Ramesh General Store" aria-label="Store name" data-i18n-aria-label="storeName"/></div><div class="form-row"><input value="MG Road, Pune" aria-label="Address" data-i18n-aria-label="address"/></div><div class="language-setting"><label id="languageLabel" data-i18n="language">Language</label><details id="languageDropdown" class="language-dropdown" aria-labelledby="languageLabel"><summary><span id="languageSelectedLabel">English</span><svg class="language-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></summary><div class="language-options" role="group" aria-labelledby="languageLabel"><button type="button" class="language-option" data-language="en" aria-pressed="true">English</button><button type="button" class="language-option" data-language="hi" aria-pressed="false">हिन्दी</button><button type="button" class="language-option" data-language="bn" aria-pressed="false">বাংলা</button><button type="button" class="language-option" data-language="mr" aria-pressed="false">मराठी</button><button type="button" class="language-option" data-language="te" aria-pressed="false">తెలుగు</button><button type="button" class="language-option" data-language="ta" aria-pressed="false">தமிழ்</button><button type="button" class="language-option" data-language="or" aria-pressed="false">ଓଡ଼ିଆ</button><button type="button" class="language-option" data-language="ml" aria-pressed="false">മലയാളം</button></div></details></div><p id="languageNotice" class="form-notice" role="status" aria-live="polite" hidden></p><button style="width:100%" data-i18n="saveChanges">Save Changes</button></div></section>
+  <section id="profile" class="section"><div class="card profile"><div class="avatarbig">RK</div><h3 style="color:var(--text);font-size:16px;margin-bottom:10px" data-i18n="profile">Profile</h3><div class="form-row"><input value="Ramesh Kumar" aria-label="Name" data-i18n-aria-label="name"/></div><div class="form-row"><input id="profileEmail" type="email" value="" readonly aria-label="Email" data-i18n-aria-label="email"/></div><div class="form-row"><input value="+91 98765 43210" aria-label="Phone number" data-i18n-aria-label="phoneNumber"/></div><div class="form-row"><input value="Ramesh General Store" aria-label="Store name" data-i18n-aria-label="storeName"/></div><div class="form-row"><input value="MG Road, Pune" aria-label="Address" data-i18n-aria-label="address"/></div><div class="language-setting"><label id="languageLabel" data-i18n="language">Language</label><details id="languageDropdown" class="language-dropdown" aria-labelledby="languageLabel"><summary><span id="languageSelectedLabel">English</span><svg class="language-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></summary><div class="language-options" role="group" aria-labelledby="languageLabel"><button type="button" class="language-option" data-language="en" aria-pressed="true">English</button><button type="button" class="language-option" data-language="hi" aria-pressed="false">हिन्दी</button><button type="button" class="language-option" data-language="bn" aria-pressed="false">বাংলা</button><button type="button" class="language-option" data-language="mr" aria-pressed="false">मराठी</button><button type="button" class="language-option" data-language="te" aria-pressed="false">తెలుగు</button><button type="button" class="language-option" data-language="ta" aria-pressed="false">தமிழ்</button><button type="button" class="language-option" data-language="or" aria-pressed="false">ଓଡ଼ିଆ</button><button type="button" class="language-option" data-language="ml" aria-pressed="false">മലയാളം</button></div></details></div><p id="languageNotice" class="form-notice" role="status" aria-live="polite" hidden></p><button style="width:100%" data-i18n="saveChanges">Save Changes</button></div></section>
   <section id="bills" class="section">
     <div class="card report-overview">
       <div>
@@ -86,31 +86,6 @@
         <thead><tr><th data-i18n="item">Item</th><th data-i18n="stock">Stock</th><th data-i18n="price">Price</th><th data-i18n="status">Status</th></tr></thead>
         <tbody id="invTable"></tbody>
       </table>
-    </div>
-    <div class="card price-compare-card">
-      <div class="inv-bar">
-        <div>
-          <h3 style="color:var(--text);font-size:17px;letter-spacing:-.02em;text-transform:none" data-i18n="priceCompare">Price compare</h3>
-          <p style="color:var(--muted);font-size:13px" data-i18n="priceCompareHint">Mock wholesale quotes for low-stock / selected items</p>
-        </div>
-        <button type="button" id="refreshQuotes" class="secondary" data-i18n="refreshQuotes">Refresh quotes</button>
-      </div>
-      <div class="table-scroll">
-        <table class="table" id="priceCompareTable">
-          <thead>
-            <tr>
-              <th data-i18n="item">Item</th>
-              <th data-i18n="yourPrice">Your price</th>
-              <th>JumboTail</th>
-              <th>Flipkart</th>
-              <th>Amazon</th>
-              <th data-i18n="bestDeal">Best</th>
-            </tr>
-          </thead>
-          <tbody id="priceCompareBody"></tbody>
-        </table>
-      </div>
-      <p class="form-notice" data-i18n="priceCompareDisclaimer">Sample data only — not live marketplace scraping.</p>
     </div>
   </section>
   <section id="customers" class="section">
@@ -261,8 +236,11 @@
       </article>
     </div>
   </section>
+  <section id="marketplace" class="section">
+    <div id="marketplaceRoot"></div>
+  </section>
 </main>
-<nav class="bottomnav" aria-label="Main navigation"><a href="#" data-view="dashboard" class="active" aria-current="page" aria-label="Home" data-i18n-aria-label="home"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"></path><path d="M5 9v11h14V9M9 20v-6h6v6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="home">Home</span></a><a href="#" data-view="bills" aria-label="Bills" data-i18n-aria-label="bills"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="bills">Bills</span></a><a href="#" data-view="customers" aria-label="Customers" data-i18n-aria-label="customers"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1zM16 5.2a3.5 3.5 0 0 1 0 6.6M18 14a5 5 0 0 1 3.5 4.8V20h-3"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="customers">Customers</span></a><a href="#" data-view="inventory" aria-label="Stock" data-i18n-aria-label="stock"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5zM3 8v9l9 5 9-5V8M12 13v9"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="stock">Stock</span></a><a href="#" data-view="profile" aria-label="Profile" data-i18n-aria-label="openProfile"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20v-1a8 8 0 0 1 16 0v1"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="profile">Profile</span></a></nav>
+<nav class="bottomnav" aria-label="Main navigation"><a href="#" data-view="dashboard" class="active" aria-current="page" aria-label="Home" data-i18n-aria-label="home"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"></path><path d="M5 9v11h14V9M9 20v-6h6v6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="home">Home</span></a><a href="#" data-view="bills" aria-label="Bills" data-i18n-aria-label="bills"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="bills">Bills</span></a><a href="#" data-view="customers" aria-label="Customers" data-i18n-aria-label="customers"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1zM16 5.2a3.5 3.5 0 0 1 0 6.6M18 14a5 5 0 0 1 3.5 4.8V20h-3"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="customers">Customers</span></a><a href="#" data-view="inventory" aria-label="Stock" data-i18n-aria-label="stock"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5zM3 8v9l9 5 9-5V8M12 13v9"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="stock">Stock</span></a><a href="#" data-view="marketplace" aria-label="Marketplace" data-i18n-aria-label="marketplace"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16l-1.5 12h-13z"></path><path d="M8 7V5a4 4 0 0 1 8 0v2"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="marketplace">Market</span></a><a href="#" data-view="profile" aria-label="Profile" data-i18n-aria-label="openProfile"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20v-1a8 8 0 0 1 16 0v1"></path></svg></span><span class="nav-tooltip" aria-hidden="true" data-i18n="profile">Profile</span></a></nav>
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

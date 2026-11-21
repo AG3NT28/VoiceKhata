@@ -60,7 +60,15 @@ function authHeaders(extra = {}) {
 
 async function apiFetch(path, options = {}) {
   const headers = authHeaders(options.headers || {});
-  return fetch(`${API_BASE}${path}`, { ...options, headers }).then(toJson);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    return await toJson(response);
+  } catch (err) {
+    if (err instanceof TypeError || /failed to fetch/i.test(err.message || '')) {
+      throw new Error('Cannot reach server. Is the backend running on port 8000?');
+    }
+    throw err;
+  }
 }
 
 /** Exchange a Supabase access token for the shared demo-shop VoiceKhata JWT. */
@@ -71,12 +79,12 @@ export async function exchangeSupabaseToken(supabaseAccessToken) {
   }).then(toJson);
 }
 
-/** Passwordless shop login — email only. */
-export function loginWithEmail(email) {
+/** Passwordless shop login — email only. reset=true wipes shop data for a new email. */
+export function loginWithEmail(email, { reset = false } = {}) {
   return apiFetch('/auth/email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: String(email || '').trim() }),
+    body: JSON.stringify({ email: String(email || '').trim(), reset: Boolean(reset) }),
   });
 }
 
@@ -306,4 +314,60 @@ export function adjustStock(id, delta, reason = 'adjust') {
 
 export function listTransactions(customerId, limit = 20) {
   return apiFetch(`/transactions?customer_id=${encodeURIComponent(customerId)}&limit=${limit}`);
+}
+
+/** B2B marketplace intelligence */
+export function marketplaceSearch(query, { purchaseType = 'wholesale', providers } = {}) {
+  return apiFetch('/api/marketplace/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      purchase_type: purchaseType,
+      providers: providers || null,
+    }),
+  });
+}
+
+export function marketplaceProviders() {
+  return apiFetch('/api/marketplace/providers');
+}
+
+export function marketplaceRedirect(offerId) {
+  return apiFetch(`/api/marketplace/redirect/${offerId}`, { method: 'POST' });
+}
+
+export function marketplaceHistory() {
+  return apiFetch('/api/marketplace/history');
+}
+
+export function marketplaceImport(file, supplierName = 'Imported Supplier') {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('supplier_name', supplierName);
+  return fetch(`${API_BASE}/api/marketplace/suppliers/import`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  }).then(toJson);
+}
+
+export function marketplaceCompare(offerIds) {
+  return apiFetch('/api/marketplace/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ offer_ids: offerIds }),
+  });
+}
+
+export function marketplaceStars() {
+  return apiFetch('/api/marketplace/stars');
+}
+
+export function marketplaceStar(offerId) {
+  return apiFetch(`/api/marketplace/stars/${offerId}`, { method: 'POST' });
+}
+
+export function marketplaceUnstar(offerId) {
+  return apiFetch(`/api/marketplace/stars/${offerId}`, { method: 'DELETE' });
 }

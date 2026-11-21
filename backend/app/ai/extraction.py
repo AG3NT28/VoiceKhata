@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, ValidationError
 
 class ExtractedIntent(BaseModel):
-    intent: Literal['ADD_CUSTOMER','ADD_CREDIT','RECORD_PAYMENT','CHECK_BALANCE','DAILY_SUMMARY','KHATA_SUMMARY','STOCK_SUMMARY','CORRECT_LAST','CLARIFY']
+    intent: Literal['ADD_CUSTOMER','ADD_CREDIT','RECORD_PAYMENT','CHECK_BALANCE','DAILY_SUMMARY','KHATA_SUMMARY','STOCK_SUMMARY','FIND_WHOLESALE','CORRECT_LAST','CLARIFY']
     confidence: float = Field(ge=0.0, le=1.0)
     entities: dict = Field(default_factory=dict)
     clarification_needed: bool = False
