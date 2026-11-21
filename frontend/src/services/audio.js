@@ -18,7 +18,7 @@ export class VoiceRecorder {
 
   async start() {
     this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
 
     const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', ''];
@@ -30,18 +30,30 @@ export class VoiceRecorder {
     };
     this.startedAt = Date.now();
     this.mediaRecorder.start();
+
+    // Auto-stop after 12s so payloads stay small and latency stays low.
+    this._autoStopTimer = setTimeout(() => {
+      if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.mediaRecorder.stop();
+      }
+    }, 12000);
   }
 
   /** Stops recording and resolves to a WAV Blob. */
   async stop() {
     if (!this.mediaRecorder) return null;
     const recorder = this.mediaRecorder;
+    clearTimeout(this._autoStopTimer);
 
     const rawBlob = await new Promise((resolve) => {
       recorder.onstop = () => {
         resolve(new Blob(this.chunks, { type: recorder.mimeType || 'audio/webm' }));
       };
-      recorder.stop();
+      try {
+        recorder.stop();
+      } catch {
+        /* already stopped by auto-timer */
+      }
     });
 
     this.stream?.getTracks().forEach((track) => track.stop());
@@ -53,6 +65,7 @@ export class VoiceRecorder {
   }
 
   cancel() {
+    clearTimeout(this._autoStopTimer);
     try {
       this.mediaRecorder?.stop();
     } catch {

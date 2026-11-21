@@ -32,6 +32,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [ttsOn, setTtsOn] = useState(true);
   const [typed, setTyped] = useState('');
+  const [processingMs, setProcessingMs] = useState(null);
 
   const recorderRef = useRef(null);
   const resultRef = useRef(null);
@@ -85,12 +86,15 @@ export default function App() {
 
     setRecording(false);
     setBusy(true);
+    const startedAt = Date.now();
     try {
       const wav = await recorderRef.current?.stop();
       if (!wav) throw new Error('Koi audio capture nahi hua, dobara try karein.');
       await run(sendAudio(wav));
+      setProcessingMs(Date.now() - startedAt);
     } catch (err) {
       setError(err.message);
+      setProcessingMs(null);
     } finally {
       recorderRef.current = null;
       setBusy(false);
@@ -107,6 +111,7 @@ export default function App() {
     try {
       await run(sendText(text));
       setTyped('');
+      setProcessingMs(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -198,7 +203,7 @@ export default function App() {
 
                 <p className="mt-4 text-base font-semibold">
                   {recording
-                    ? `Sun raha hoon… ${seconds}s`
+                    ? `Sun raha hoon. ${seconds}s (max 12s)`
                     : busy
                     ? 'Process ho raha hai…'
                     : 'Bolne ke liye dabaiye'}
@@ -277,6 +282,11 @@ export default function App() {
                       STT {Math.round(stt.latency * 1000)} ms
                     </span>
                   )}
+                  {processingMs != null && (
+                    <span className="text-[11px] font-semibold text-emerald-600">
+                      Total {(processingMs / 1000).toFixed(1)}s
+                    </span>
+                  )}
                 </div>
 
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -285,6 +295,12 @@ export default function App() {
                 <p className="mt-1 text-lg font-medium leading-snug">
                   {result.transcript || <span className="text-slate-400">(kuch nahi suna)</span>}
                 </p>
+                {result.transcript && (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Suna gaya: {result.transcript.split(/\s+/).length} words · {stt?.model || 'prisma-v3.0'}
+                  </div>
+                )}
 
                 <div className="mt-4 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
                   <div className="flex items-start gap-3">

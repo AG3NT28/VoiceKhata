@@ -60,12 +60,11 @@ async def transcribe_detailed(
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "topic": "Kirana store customer ledger, udhaar and payment entries in Hindi and English",
-        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance"]',
+        "keyterms": '["udhaar","khata","rupaye","baaki","jama","payment","balance","likho","diye","customer"]',
     }
     files = {"audio_file": (filename, audio_bytes, _mime_for(filename))}
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         resp = await client.post(
             GNANI_STT_URL,
             headers={"X-API-Key-ID": settings.GNANI_API_KEY},
