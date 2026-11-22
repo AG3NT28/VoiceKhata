@@ -4,7 +4,7 @@
 
 ## Overview
 
-Voice Khata converts the traditional handwritten *Khata* (credit ledger) used by Indian kirana store owners into an AI-powered voice-driven digital ledger. The shopkeeper simply speaks transactions in Hindi, English, or code-mixed Hinglish, and the system records, calculates balances, answers queries, and corrects errors - all through voice.
+Voice Khata converts the traditional handwritten *Khata* (credit ledger) used by Indian kirana store owners into an AI-powered voice-driven digital ledger. The shopkeeper simply speaks transactions in Hindi, English, code-mixed Hinglish, Telugu, Kannada, or Tamil, and the system records, calculates balances, answers queries, and corrects errors - all through voice. Spoken replies come back in the same language.
 
 ## Problem Statement
 
@@ -20,7 +20,8 @@ Voice Khata solves this by letting the shopkeeper speak naturally (for example: 
 - Outstanding balance calculation
 - Voice queries (balance, daily summary)
 - Spoken transaction correction with audit trail
-- Multilingual / code-mixed (Hindi + English) support
+- Multilingual / code-mixed support: Hindi, English, Telugu, Kannada, Tamil
+- Mobile-first responsive UI (safe-area aware, scales from small phones up)
 - Real-time voice responses (< 2s TTFA)
 - Daily business summary
 - SQLite stock / inventory with audit logs
@@ -89,6 +90,32 @@ See `backend/.env.example` and `frontend/.env.example`. Real `.env` files are gi
 cd backend
 pytest tests/ -v
 ```
+
+## Live Deployment
+
+- **URL:** https://voice-khata-production.up.railway.app
+- **Platform:** [Railway](https://railway.com) — one Docker service serves the FastAPI API and the built Vite SPA.
+- **Database:** SQLite on a Railway volume mounted at `/data` (`DATABASE_URL=sqlite+aiosqlite:////data/voice_khata.db`), so ledger data survives restarts and redeploys.
+
+### Deploy / update
+
+```bash
+# from the repo root, with the Railway CLI logged in
+railway link          # select the voice-khata project
+railway up --ci       # build the Dockerfile and deploy
+```
+
+The `Dockerfile` builds `frontend/` with Node, copies `dist/` into `backend/static`, and runs Uvicorn. FastAPI serves the SPA at `/` and the API at `/voice`, `/customers`, etc.
+
+### Enable real voice (STT / LLM / TTS)
+
+The deployed demo runs without provider keys, so the mic returns a canned transcript. Add any of these in **Railway → service → Variables** and redeploy:
+
+| Variable | Purpose |
+| --- | --- |
+| `GNANI_API_KEY` | Gnani Prisma STT + Shivani TTS (all 10 Indian languages) |
+| `LLM_API_KEY` | Groq Whisper STT fallback + LLM intent extraction |
+| `LLM_BASE_URL` | Defaults to `https://api.groq.com/openai/v1` |
 
 ## License
 
