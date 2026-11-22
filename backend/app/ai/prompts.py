@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.ai.dataset import core_invariants, few_shot_from_dataset
+from app.ai.price_dataset import few_shot_from_price_dataset
 
 _INVARIANT_LINES = "\n".join(
     f"- {inv.get('rule')}: {inv.get('description')}"
@@ -21,7 +22,7 @@ Available intents:
 - RECORD_PAYMENT: customer paid (requires customer_name + amount_paise)
 - CHECK_BALANCE: ask outstanding
 - DAILY_SUMMARY / KHATA_SUMMARY / STOCK_SUMMARY: read-only summaries
-- FIND_WHOLESALE: search wholesale / marketplace offers (entities.query = product phrase)
+- FIND_WHOLESALE: compare / search wholesale marketplace prices (entities.query, optional product/brand/quantity/unit)
 - CORRECT_LAST: fix previous amount (entities.amount_paise = corrected value in paise)
 - CLARIFY: missing/ambiguous info, future promise, negation, refund ambiguity, multi-customer
 
@@ -62,7 +63,12 @@ _BASE_FEW_SHOTS = [
 def _merge_few_shots() -> list[tuple[str, dict]]:
     seen: set[str] = set()
     out: list[tuple[str, dict]] = []
-    for transcript, payload in list(_BASE_FEW_SHOTS) + few_shot_from_dataset(25):
+    # Ledger edge-cases + multilingual price-comparison training JSONL
+    for transcript, payload in (
+        list(_BASE_FEW_SHOTS)
+        + few_shot_from_dataset(20)
+        + few_shot_from_price_dataset(24)
+    ):
         key = transcript.strip().lower()
         if key in seen:
             continue

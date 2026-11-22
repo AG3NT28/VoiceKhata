@@ -62,10 +62,22 @@ _BALANCE_WORDS = {"balance", "baaki", "baki", "hisaab", "hisab", "kitna", "kitne
 _SUMMARY_WORDS = {"summary", "report", "total", "aaj", "din"}
 _STOCK_WORDS = {"stock", "inventory", "maal", "samaan", "stash", "store"}
 _WHOLESALE_WORDS = {
-    "wholesale", "thok", "थोक", "supplier", "jumbotail", "udaan", "ondc",
-    "bulk", "carton", "moq", "bazaar", "market", "rate", "rates", "deal",
+    "wholesale", "thok", "थोक", "supplier", "jumbotail", "udaan", "ondc", "wishbee",
+    "bulk", "carton", "moq", "bazaar", "market", "rate", "rates", "deal", "marketplace",
+    "सस्ता", "रेट", "दाम", "तुलना", "ధర", "తక్కువ", "விலை", "குறைந்த", "ಬೆಲೆ", "ಕಡಿಮೆ",
 }
-_FIND_WORDS = {"find", "search", "khojo", "dhundo", "compare", "sasta", "cheapest"}
+_FIND_WORDS = {
+    "find", "search", "khojo", "dhundo", "compare", "sasta", "cheapest",
+    "dikhao", "batao", "chahiye", "show", "price", "prices",
+}
+_GROCERY_HINTS = (
+    "oil", "atta", "rice", "sugar", "dal", "tel", "chawal", "chini", "kg", "litre",
+    "namak", "salt", "detergent", "biscuit", "coffee", "maggi", "sunflower",
+    "आटा", "दाल", "चीनी", "नमक", "तेल", "चावल",
+    "పిండి", "పప్పు", "ఉప్పు", "నూనె", "బియ్యం",
+    "பருப்பு", "அரிசி", "மாவு", "எண்ணெய்",
+    "ಬೇಳೆ", "ಅಕ್ಕಿ", "ಹಿಟ್ಟು", "ಎಣ್ಣೆ",
+)
 _KHATA_WORDS = {"khata", "ledger", "udhaar", "dues", "baaki"}
 _ADD_CUSTOMER_WORDS = {"naya", "nayi", "new", "banao", "banado", "add", "kholo", "khata"}
 _FUTURE_WORDS = {"dega", "denge", "dengi", "karega", "karenge", "hoga", "tomorrow", "will"}
@@ -296,12 +308,11 @@ def parse_text(text: str) -> ExtractedIntent:
         return ExtractedIntent(intent="STOCK_SUMMARY", confidence=0.9, entities={})
 
     if (tokens & _WHOLESALE_WORDS) or (
-        (tokens & _FIND_WORDS)
-        and any(w in norm for w in ("oil", "atta", "rice", "sugar", "dal", "tel", "chawal", "chini", "kg", "litre"))
-    ):
+        (tokens & _FIND_WORDS) and any(w in norm for w in _GROCERY_HINTS)
+    ) or any(w in norm for w in ("compare", "तुलना", "పోల్చు", "ஒப்பிடு", "ಹೋಲಿಸಿ", "sasta rate", "सस्ता रेट", "सस्ता")):
         return ExtractedIntent(
             intent="FIND_WHOLESALE",
-            confidence=0.9,
+            confidence=0.92,
             entities={"query": text.strip(), "purchase_type": "wholesale"},
         )
 

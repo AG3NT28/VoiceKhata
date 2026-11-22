@@ -53,7 +53,7 @@
       <h3 class="recent-heading" data-i18n="recentActivity">Recent activity</h3>
       <ul id="recentActivity" class="recent-list"></ul>
     </div>
-    <form id="customerCodeLookup" class="code-lookup" autocomplete="off">
+    <form id="customerCodeLookup" class="code-lookup" autocomplete="off" hidden aria-hidden="true">
       <label class="field-label" for="customerCodeInput" data-i18n="lookupByCode">Lookup by customer ID</label>
       <div class="code-lookup-row">
         <input id="customerCodeInput" type="text" inputmode="text" placeholder="e.g. C0001" data-i18n-placeholder="codePlaceholder" aria-label="Customer ID" data-i18n-aria-label="customerCode" />
@@ -100,7 +100,7 @@
         </div>
       </div>
       <form id="customerSearchForm" class="customer-search">
-        <input id="customerSearch" type="search" placeholder="Search customers by name, phone or ID" data-i18n-placeholder="searchCustomers" aria-label="Search customers" data-i18n-aria-label="searchCustomers" />
+        <input id="customerSearch" type="search" placeholder="Search by customer name or phone" data-i18n-placeholder="searchCustomers" aria-label="Search customers" data-i18n-aria-label="searchCustomers" />
         <button type="submit" data-i18n="searchButton">Search</button>
       </form>
       <p id="customerNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
@@ -118,7 +118,7 @@
           <button type="button" id="pickContactButton" class="secondary" data-i18n="fromContacts">From contacts</button>
           <button type="button" id="phoneOnlyToggle" class="secondary" data-i18n="phoneOnly">Phone only</button>
         </div>
-        <p id="registeredCodeNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+        <p id="registeredCodeNotice" class="form-notice" role="status" aria-live="polite" hidden aria-hidden="true"></p>
         <div id="customerTxnHistory" class="customer-txn-history" hidden>
           <h4 data-i18n="recentTxns">Recent transactions</h4>
           <ul id="customerTxnList" class="recent-list"></ul>

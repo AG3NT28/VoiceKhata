@@ -65,7 +65,7 @@ const translations={
     expenseBreakdown:'Expense breakdown',expenseByCategory:'Share by category',
     expenseChartDescription:'Expenses: rent 35%, salary 28%, utilities 15%, marketing 12%, other 10%.',
     rent:'Rent',salary:'Salary',utilities:'Utilities',marketing:'Marketing',other:'Other',
-    lookupByCode:'Lookup by customer ID',codePlaceholder:'e.g. RAM99',lookup:'Lookup',customerCode:'Customer ID',customerIdLabel:'ID',deleteCustomer:'Delete',confirmDelete:'Remove this customer from the active list?',customerDeleted:'Customer removed.',remind:'Remind',remindScheduled:'Reminder scheduled.',reminderOn:'Reminder on',reminderOff:'No reminder',reminderSent:'Reminder sent',fromContacts:'From contacts',phoneOnly:'Phone only',contactsUnsupported:'Contacts picker not supported here.',contactsDenied:'Could not read contacts.',phoneOnlyHint:'Name optional — phone is enough to register. ID = first 3 letters of name + last 2 digits of phone.',registeredCode:'Registered ID',idUpdated:'Customer ID updated',searchCustomers:'Search by name, phone or ID',priceCompare:'Price compare',priceCompareHint:'Manual / sample prices vs JumboTail, Flipkart, Amazon',resetPrices:'Reset samples',yourPrice:'Your price',bestDeal:'Best',priceCompareDisclaimer:'Sample data only — not live marketplace scraping.',
+    lookupByCode:'Lookup by customer ID',codePlaceholder:'e.g. RAM99',lookup:'Lookup',customerCode:'Customer ID',customerIdLabel:'ID',deleteCustomer:'Delete',confirmDelete:'Remove this customer from the active list?',customerDeleted:'Customer removed.',remind:'Remind',remindScheduled:'Reminder scheduled.',reminderOn:'Reminder on',reminderOff:'No reminder',reminderSent:'Reminder sent',fromContacts:'From contacts',phoneOnly:'Phone only',contactsUnsupported:'Contacts picker not supported here.',contactsDenied:'Could not read contacts.',phoneOnlyHint:'Name is optional — phone is enough to save.',registeredCode:'Registered ID',idUpdated:'Customer ID updated',searchCustomers:'Search by customer name or phone',priceCompare:'Price compare',priceCompareHint:'Manual / sample prices vs JumboTail, Flipkart, Amazon',resetPrices:'Reset samples',yourPrice:'Your price',bestDeal:'Best',priceCompareDisclaimer:'Sample data only — not live marketplace scraping.',
     todaySales:'Today credit',todayPayments:'Today payments',lowStock:'Low stock',
     addEntry:'Add entry',speakKhata:'Speak khata',speakStock:'Speak stock',
     recentActivity:'Recent activity',recentTxns:'Recent transactions',
@@ -367,12 +367,12 @@ function renderCustomers(){
     const details=document.createElement('button');
     details.type='button';
     details.className='customer-row-main';
-    details.setAttribute('aria-label',`${customer.name}, ${customer.code||''}, ${currencyFormatter.format(Number(customer.balance_rupees ?? customer.amount) || 0)}`);
+    details.setAttribute('aria-label',`${customer.name}, ${customer.phone || ''}, ${currencyFormatter.format(Number(customer.balance_rupees ?? customer.amount) || 0)}`);
     const name=document.createElement('h3');
     name.textContent=customer.name || customer.phone || t('customer');
     const meta=document.createElement('p');
     meta.className='customer-meta';
-    meta.textContent=`${customer.code || '—'} · ${customer.phone || '—'}`;
+    meta.textContent=customer.phone || '—';
     const reminderLine=document.createElement('p');
     reminderLine.className=`customer-reminder${status.active?' is-on':''}${status.sent?' is-sent':''}`;
     reminderLine.textContent=status.active && status.dueAt
@@ -629,13 +629,9 @@ customerForm.addEventListener('submit',async event=>{
   try{
     await ensureAuth();
     if(editingCustomerId){
-      const updated=await updateCustomer(editingCustomerId,{name:resolvedName, phone});
-      if(updated?.customer_code){
-        setNotice(document.getElementById('registeredCodeNotice'), `${t('idUpdated')}: ${updated.customer_code}`, false);
-      }
+      await updateCustomer(editingCustomerId,{name:resolvedName, phone});
     }else{
       const created=await createCustomer({name:resolvedName, phone});
-      setNotice(document.getElementById('registeredCodeNotice'), `${t('registeredCode')}: ${created.customer_code}`, false);
       if(amount>0){
         const txnType=type==='taken'?'payment':'credit';
         const txnDate=(dateValue || getLocalDateTime()).slice(0,10);
@@ -967,7 +963,7 @@ document.getElementById('phoneOnlyToggle')?.addEventListener('click',()=>{
   const nameInput=document.getElementById('customerName');
   nameInput.value='';
   nameInput.removeAttribute('required');
-  setNotice(document.getElementById('customerFormNotice'),t('phoneOnlyHint'),false);
+  setNotice(document.getElementById('customerFormNotice'),'',false);
   document.getElementById('customerPhone').focus();
 });
 

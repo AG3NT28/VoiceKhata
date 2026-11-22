@@ -356,6 +356,13 @@ async def handle_transcript(db: AsyncSession, shop_id: uuid.UUID, transcript: st
         from app.marketplace.orchestrator import search_marketplace
 
         query = (entities.get("query") or transcript).strip()
+        if entities.get("brand") or entities.get("product"):
+            bits = [
+                str(entities["brand"]) if entities.get("brand") else "",
+                str(entities["product"]) if entities.get("product") else "",
+                query,
+            ]
+            query = " ".join(b for b in bits if b).strip() or query
         search = await search_marketplace(
             db,
             shop_id=shop_id,
