@@ -1,9 +1,9 @@
 import { clearToken, getToken, loginWithEmail, setToken } from '../services/api.js';
 
-const SEEN_KEY = 'voicekhata.welcomeSeen';
 const EMAIL_KEY = 'voicekhata.shopEmail';
+const LANG_KEY = 'voiceKhata.language';
 
-const LANG_CHIPS = [
+export const LANG_CHIPS = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिन्दी' },
   { code: 'te', label: 'తెలుగు' },
@@ -15,12 +15,23 @@ const LANG_CHIPS = [
   { code: 'mr', label: 'मराठी' },
 ];
 
-export function shouldShowWelcome() {
-  return localStorage.getItem(SEEN_KEY) !== '1';
+function welcomeKeyFor(email) {
+  return `voicekhata.welcomeSeen:${String(email || '').trim().toLowerCase()}`;
 }
 
-export function markWelcomeSeen() {
-  localStorage.setItem(SEEN_KEY, '1');
+export function shouldShowWelcome(email) {
+  if (!email) return true;
+  return localStorage.getItem(welcomeKeyFor(email)) !== '1';
+}
+
+export function markWelcomeSeen(email) {
+  if (!email) return;
+  localStorage.setItem(welcomeKeyFor(email), '1');
+}
+
+export function clearWelcomeSeen(email) {
+  if (!email) return;
+  localStorage.removeItem(welcomeKeyFor(email));
 }
 
 export function getShopEmail() {
@@ -38,24 +49,67 @@ export function clearShopSession() {
   localStorage.removeItem(EMAIL_KEY);
 }
 
+function langGridHtml(initialLanguage) {
+  return LANG_CHIPS.map(
+    (chip) =>
+      `<button type="button" class="welcome-lang-btn" data-language="${chip.code}" aria-pressed="${chip.code === initialLanguage}">${chip.label}</button>`,
+  ).join('');
+}
+
+function wireLanguagePicker(root, { initialLanguage, onLanguage }) {
+  let selected = initialLanguage;
+  const buttons = () => root.querySelectorAll('.welcome-lang-btn');
+  buttons().forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selected = btn.dataset.language;
+      buttons().forEach((b) => {
+        b.setAttribute('aria-pressed', String(b.dataset.language === selected));
+      });
+      try {
+        localStorage.setItem(LANG_KEY, selected);
+      } catch {}
+      onLanguage?.(selected);
+    });
+  });
+  return {
+    get selected() {
+      return selected;
+    },
+  };
+}
+
+function finishLanguage(overlay, { email, shopReset, isNewSession, language, onLanguage, resolve }) {
+  markWelcomeSeen(email);
+  try {
+    localStorage.setItem(LANG_KEY, language);
+  } catch {}
+  onLanguage?.(language);
+  overlay.classList.add('welcome-exit');
+  setTimeout(() => overlay.remove(), 280);
+  resolve({ email, shopReset, isNewSession, language });
+}
+
 /**
- * Email-only gate (no password). Issues demo-shop JWT via POST /auth/email.
+ * Email login, then language pick (fixes post-login language UX).
+ * Server resets shared shop data when the email changes.
  */
-export async function mountAuthGate({ root } = {}) {
+export async function mountAuthGate({ root, initialLanguage = 'en', onLanguage } = {}) {
   const host = root || document.body;
   const savedEmail = getShopEmail();
-  if (savedEmail && getToken()) {
-    return { email: savedEmail };
+
+  // Returning session: keep shop data, skip overlays
+  if (savedEmail && getToken() && !shouldShowWelcome(savedEmail)) {
+    return { email: savedEmail, shopReset: false, isNewSession: false };
   }
-  if (savedEmail) {
-    try {
-      const data = await loginWithEmail(savedEmail);
-      setToken(data.access_token);
-      setShopEmail(data.email || savedEmail);
-      return { email: data.email || savedEmail };
-    } catch {
-      clearToken();
-    }
+
+  if (savedEmail && getToken() && shouldShowWelcome(savedEmail)) {
+    return showLanguageStep(host, {
+      email: savedEmail,
+      initialLanguage,
+      onLanguage,
+      shopReset: false,
+      isNewSession: false,
+    });
   }
 
   return new Promise((resolve) => {
@@ -63,20 +117,33 @@ export async function mountAuthGate({ root } = {}) {
     overlay.id = 'authOverlay';
     overlay.className = 'auth-overlay';
     overlay.innerHTML = `
-      <div class="auth-card" role="dialog" aria-labelledby="authTitle">
+      <div class="auth-card" role="dialog" aria-labelledby="authTitle" aria-modal="true">
         <p class="welcome-eyebrow">VoiceKhata</p>
-        <h1 id="authTitle" class="welcome-title">Shop login</h1>
-        <p class="welcome-sub">Enter your shop email — no password needed</p>
-        <form id="authForm" class="auth-form">
-          <label class="auth-field">
-            <span>Shop email</span>
-            <input id="authEmail" type="email" autocomplete="email" required placeholder="shop@example.com" />
-          </label>
-          <p id="authNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
-          <div class="auth-actions">
-            <button type="submit" id="authContinue" class="welcome-enter">Continue</button>
+        <div id="authStepEmail">
+          <h1 id="authTitle" class="welcome-title">Shop login</h1>
+          <p class="welcome-sub">Enter shop email — no password. A new email starts a fresh shop.</p>
+          <form id="authForm" class="auth-form">
+            <label class="auth-field">
+              <span>Shop email</span>
+              <input id="authEmail" type="email" autocomplete="email" required placeholder="shop@example.com" />
+            </label>
+            <p id="authNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+            <div class="auth-actions">
+              <button type="submit" id="authContinue" class="welcome-enter">Continue</button>
+            </div>
+          </form>
+        </div>
+        <div id="authStepLanguage" hidden>
+          <h1 id="langTitle" class="welcome-title">Choose language</h1>
+          <p class="welcome-sub">You can change this anytime in Profile</p>
+          <div class="welcome-lang-grid" role="group" aria-label="Languages">
+            ${langGridHtml(initialLanguage)}
           </div>
-        </form>
+          <p id="langNotice" class="form-notice" role="status" aria-live="polite" hidden></p>
+          <div class="auth-actions">
+            <button type="button" id="langContinue" class="welcome-enter">Enter shop</button>
+          </div>
+        </div>
       </div>
     `;
     host.append(overlay);
@@ -85,7 +152,12 @@ export async function mountAuthGate({ root } = {}) {
     const form = overlay.querySelector('#authForm');
     const emailInput = overlay.querySelector('#authEmail');
     const continueBtn = overlay.querySelector('#authContinue');
+    const stepEmail = overlay.querySelector('#authStepEmail');
+    const stepLang = overlay.querySelector('#authStepLanguage');
+    const langContinue = overlay.querySelector('#langContinue');
     if (savedEmail) emailInput.value = savedEmail;
+
+    const picker = wireLanguagePicker(stepLang, { initialLanguage, onLanguage });
 
     function setAuthNotice(message, isError = true) {
       notice.textContent = message || '';
@@ -97,13 +169,31 @@ export async function mountAuthGate({ root } = {}) {
       event.preventDefault();
       continueBtn.disabled = true;
       setAuthNotice('');
+      const email = emailInput.value.trim().toLowerCase();
       try {
-        const data = await loginWithEmail(emailInput.value);
+        // Server decides reset when email differs from last active shop email
+        const data = await loginWithEmail(email);
         setToken(data.access_token);
-        setShopEmail(data.email || emailInput.value);
-        overlay.classList.add('welcome-exit');
-        setTimeout(() => overlay.remove(), 280);
-        resolve({ email: data.email || emailInput.value.trim().toLowerCase() });
+        setShopEmail(data.email || email);
+        const shopReset = Boolean(data.shop_reset);
+        if (shopReset) {
+          clearWelcomeSeen(data.email || email);
+          setAuthNotice('Fresh shop ready for this email.', false);
+        }
+        stepEmail.hidden = true;
+        stepLang.hidden = false;
+        overlay.querySelector('#authTitle')?.removeAttribute('id');
+        langContinue.focus();
+        langContinue.onclick = () => {
+          finishLanguage(overlay, {
+            email: data.email || email,
+            shopReset,
+            isNewSession: true,
+            language: picker.selected,
+            onLanguage,
+            resolve,
+          });
+        };
       } catch (err) {
         setAuthNotice(err.message || 'Could not sign in');
         continueBtn.disabled = false;
@@ -114,53 +204,42 @@ export async function mountAuthGate({ root } = {}) {
   });
 }
 
-/**
- * Mount a one-time welcome overlay with rotating language chips.
- * onContinue(languageCode) is called when the user enters the app.
- */
-export function mountWelcome({ root, onContinue, initialLanguage = 'en' }) {
-  if (!root || !shouldShowWelcome()) return null;
-
-  const overlay = document.createElement('div');
-  overlay.id = 'welcomeOverlay';
-  overlay.className = 'welcome-overlay';
-  overlay.innerHTML = `
-    <div class="welcome-card" role="dialog" aria-labelledby="welcomeTitle">
-      <p class="welcome-eyebrow">VoiceKhata</p>
-      <h1 id="welcomeTitle" class="welcome-title">Bolke khata</h1>
-      <p class="welcome-sub">Pick a language — switch anytime in Profile</p>
-      <div class="welcome-orbit" aria-hidden="true">
-        ${LANG_CHIPS.map((chip, i) =>
-          `<span class="welcome-chip" style="--i:${i}">${chip.label}</span>`,
-        ).join('')}
+function showLanguageStep(host, { email, initialLanguage, onLanguage, shopReset, isNewSession }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'authOverlay';
+    overlay.className = 'auth-overlay';
+    overlay.innerHTML = `
+      <div class="auth-card" role="dialog" aria-labelledby="langTitle" aria-modal="true">
+        <p class="welcome-eyebrow">VoiceKhata</p>
+        <h1 id="langTitle" class="welcome-title">Choose language</h1>
+        <p class="welcome-sub">You can change this anytime in Profile</p>
+        <div class="welcome-lang-grid" role="group" aria-label="Languages">
+          ${langGridHtml(initialLanguage)}
+        </div>
+        <div class="auth-actions">
+          <button type="button" id="langContinue" class="welcome-enter">Enter shop</button>
+        </div>
       </div>
-      <div class="welcome-lang-grid" role="group" aria-label="Languages">
-        ${LANG_CHIPS.map(
-          (chip) =>
-            `<button type="button" class="welcome-lang-btn" data-language="${chip.code}" aria-pressed="${chip.code === initialLanguage}">${chip.label}</button>`,
-        ).join('')}
-      </div>
-      <button type="button" class="welcome-enter" id="welcomeEnter">Enter shop</button>
-    </div>
-  `;
-  root.append(overlay);
-
-  let selected = initialLanguage;
-  overlay.querySelectorAll('.welcome-lang-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      selected = btn.dataset.language;
-      overlay.querySelectorAll('.welcome-lang-btn').forEach((b) => {
-        b.setAttribute('aria-pressed', String(b.dataset.language === selected));
+    `;
+    host.append(overlay);
+    const picker = wireLanguagePicker(overlay, { initialLanguage, onLanguage });
+    const langContinue = overlay.querySelector('#langContinue');
+    langContinue.addEventListener('click', () => {
+      finishLanguage(overlay, {
+        email,
+        shopReset,
+        isNewSession: Boolean(isNewSession),
+        language: picker.selected,
+        onLanguage,
+        resolve,
       });
     });
+    langContinue.focus();
   });
+}
 
-  overlay.querySelector('#welcomeEnter').addEventListener('click', () => {
-    markWelcomeSeen();
-    overlay.classList.add('welcome-exit');
-    setTimeout(() => overlay.remove(), 320);
-    onContinue?.(selected);
-  });
-
-  return overlay;
+/** @deprecated use mountAuthGate language step */
+export function mountWelcome() {
+  return null;
 }

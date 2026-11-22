@@ -1,4 +1,6 @@
-﻿import uuid
+﻿from __future__ import annotations
+
+import uuid
 import enum
 from datetime import datetime, date
 from sqlalchemy import (
@@ -43,6 +45,19 @@ class Shop(Base):
     inventory_items: Mapped[list["InventoryItem"]] = relationship(back_populates="shop", cascade="all, delete-orphan")
     items: Mapped[list["Item"]] = relationship(back_populates="shop", cascade="all, delete-orphan")
     stock_logs: Mapped[list["StockLog"]] = relationship(back_populates="shop", cascade="all, delete-orphan")
+    login_state: Mapped["ShopLoginState | None"] = relationship(
+        back_populates="shop", uselist=False, cascade="all, delete-orphan"
+    )
+
+
+class ShopLoginState(Base):
+    """Tracks which shop email currently owns the shared demo ledger."""
+    __tablename__ = "shop_login_state"
+    shop_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shops.id"), primary_key=True)
+    active_email: Mapped[str] = mapped_column(String(254), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    shop: Mapped["Shop"] = relationship(back_populates="login_state")
 
 class Customer(Base):
     __tablename__ = "customers"

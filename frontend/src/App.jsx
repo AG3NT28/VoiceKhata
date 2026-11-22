@@ -384,7 +384,6 @@ export default function App() {
                   <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                     <div>
                       <p className="text-sm font-semibold">{result.customer.name}</p>
-                      <p className="text-xs text-slate-500">Code {result.customer.code}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-slate-500">Baaki</p>
@@ -518,7 +517,9 @@ export default function App() {
                       </span>
                       <div>
                         <p className="text-sm font-semibold">{customer.name}</p>
-                        <p className="text-[11px] text-slate-400">{customer.code}</p>
+                        {customer.phone ? (
+                          <p className="text-[11px] text-slate-400">{customer.phone}</p>
+                        ) : null}
                       </div>
                     </div>
                     <span

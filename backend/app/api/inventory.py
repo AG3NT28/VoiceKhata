@@ -22,11 +22,16 @@ from app.utils.paise import rupees_to_paise
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 SEED_CATALOG = [
-    ("Rice 5kg", "kg", 42, 10, 32000, {"jumbotail": 30500, "flipkart": 33900, "amazon": 34900}),
-    ("Wheat Flour 5kg", "kg", 18, 10, 45000, {"jumbotail": 42900, "flipkart": 46000, "amazon": 47500}),
-    ("Sugar 1kg", "kg", 6, 10, 4800, {"jumbotail": 4500, "flipkart": 4900, "amazon": 5200}),
-    ("Cooking Oil 1L", "L", 0, 8, 18000, {"jumbotail": 16900, "flipkart": 18500, "amazon": 19200}),
-    ("Tea 250g", "pcs", 35, 10, 12000, {"jumbotail": 11200, "flipkart": 12500, "amazon": 12900}),
+    ("Fortune Sunflower Oil 1L", "L", 36, 12, 15800, {"demo_hub": 14500, "cash_carry": 13900, "local": 15200}),
+    ("Aashirvaad Atta 5kg", "kg", 40, 10, 28000, {"demo_hub": 26500, "cash_carry": 25500, "local": 27500}),
+    ("India Gate Basmati 5kg", "kg", 20, 6, 65000, {"demo_hub": 62000, "cash_carry": 63500, "local": 66000}),
+    ("Madhur Sugar 1kg", "kg", 60, 20, 4800, {"demo_hub": 4600, "cash_carry": 4500, "local": 4900}),
+    ("Tata Salt 1kg", "kg", 80, 24, 3000, {"demo_hub": 2800, "cash_carry": 2650, "local": 2900}),
+    ("Toor Dal 1kg", "kg", 45, 15, 15500, {"demo_hub": 14500, "cash_carry": 14200, "local": 15000}),
+    ("Tata Tea Gold 500g", "pcs", 24, 10, 30000, {"demo_hub": 28500, "cash_carry": 29000, "local": 31000}),
+    ("Amul Ghee 1L", "L", 10, 4, 61000, {"demo_hub": 58000, "cash_carry": 59500, "local": 62000}),
+    ("Surf Excel 1kg", "pcs", 22, 8, 19800, {"demo_hub": 18500, "cash_carry": 18200, "local": 19500}),
+    ("Parle-G 800g", "pcs", 40, 16, 6000, {"demo_hub": 5500, "cash_carry": 5400, "local": 5800}),
 ]
 
 
@@ -59,14 +64,18 @@ def _quote_response(quote: WholesaleQuote) -> WholesaleQuoteResponse:
 
 
 async def seed_inventory_if_empty(db: AsyncSession, shop: Shop) -> None:
-    count = (
-        await db.execute(
-            select(func.count()).select_from(InventoryItem).where(InventoryItem.shop_id == shop.id)
-        )
-    ).scalar() or 0
-    if count:
-        return
+    """Ensure provision inventory rows exist (adds any missing names)."""
+    existing_names = {
+        row[0]
+        for row in (
+            await db.execute(
+                select(InventoryItem.name).where(InventoryItem.shop_id == shop.id)
+            )
+        ).all()
+    }
     for name, unit, qty, reorder, cost, quotes in SEED_CATALOG:
+        if name in existing_names:
+            continue
         item = InventoryItem(
             shop_id=shop.id,
             name=name,

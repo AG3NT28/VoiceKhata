@@ -15,6 +15,7 @@ class LoginRequest(BaseModel):
 
 class EmailLoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=254)
+    reset: bool = False  # client hint; server also resets when email changes
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -22,6 +23,7 @@ class TokenResponse(BaseModel):
     shop_id: UUID
     shop_name: str
     email: Optional[str] = None
+    shop_reset: bool = False
 
 # ---------- Customer ----------
 class CustomerCreate(BaseModel):

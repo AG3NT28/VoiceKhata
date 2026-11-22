@@ -14,8 +14,6 @@ import {
   getBalance,
   createTransaction,
   listTransactions,
-  listInventory,
-  getItemQuotes,
   listStock,
   createStockItem,
   addStock,
@@ -29,8 +27,8 @@ import {
   getReminderForCustomer,
   defaultDueInDays,
 } from './features/reminders.js';
-import { clearShopSession, getShopEmail, mountAuthGate, mountWelcome } from './features/login.js';
-import { sourceLabel } from './features/prices.js';
+import { clearShopSession, getShopEmail, mountAuthGate } from './features/login.js';
+import { applyMarketplaceVoiceResult, mountMarketplace } from './features/marketplace.js';
 
 
 const views=document.querySelectorAll('.bottomnav a');
@@ -40,7 +38,7 @@ const translations={
   en:{
     home:'Home',dashboard:'Dashboard',totalSales:'Total sales',purchases:'Purchases',profit:'Profit',expenses:'Expenses',
     creditGiven:'Credit loan',creditTaken:'Taken',creditTotals:'Customer credit totals',summary:'Summary',
-    summaryHint:'Open Bills for detailed reports and transactions.',profile:'Profile',language:'Language',saveChanges:'Save changes',
+    summaryHint:'Open Bills for detailed reports and transactions.',profile:'Profile',marketplace:'Marketplace',language:'Language',saveChanges:'Save changes',
     name:'Name',email:'Email',phoneNumber:'Phone number',storeName:'Store name',address:'Address',openProfile:'Open profile',
     bills:'Bills',reportsSummary:'Reports summary',reportsLine:'Total sales ₹4.82L · Purchases ₹3.11L · Profit ₹1.71L',sales:'Sales',purchase:'Purchase',expense:'Expense',
     searchSalesBills:'Search sales bills...',searchPurchaseBills:'Search purchase bills...',addBill:'+ Add bill',
@@ -67,7 +65,7 @@ const translations={
     expenseBreakdown:'Expense breakdown',expenseByCategory:'Share by category',
     expenseChartDescription:'Expenses: rent 35%, salary 28%, utilities 15%, marketing 12%, other 10%.',
     rent:'Rent',salary:'Salary',utilities:'Utilities',marketing:'Marketing',other:'Other',
-    lookupByCode:'Lookup by customer ID',codePlaceholder:'e.g. RAM99',lookup:'Lookup',customerCode:'Customer ID',customerIdLabel:'ID',deleteCustomer:'Delete',confirmDelete:'Remove this customer from the active list?',customerDeleted:'Customer removed.',remind:'Remind',remindScheduled:'Reminder scheduled.',reminderOn:'Reminder on',reminderOff:'No reminder',reminderSent:'Reminder sent',fromContacts:'From contacts',phoneOnly:'Phone only',contactsUnsupported:'Contacts picker not supported here.',contactsDenied:'Could not read contacts.',phoneOnlyHint:'Name optional — phone is enough to register. ID = first 3 letters of name + last 2 digits of phone.',registeredCode:'Registered ID',idUpdated:'Customer ID updated',searchCustomers:'Search by name, phone or ID',priceCompare:'Price compare',priceCompareHint:'Manual / sample prices vs JumboTail, Flipkart, Amazon',resetPrices:'Reset samples',yourPrice:'Your price',bestDeal:'Best',priceCompareDisclaimer:'Sample data only — not live marketplace scraping.',
+    lookupByCode:'Lookup by customer ID',codePlaceholder:'e.g. RAM99',lookup:'Lookup',customerCode:'Customer ID',customerIdLabel:'ID',deleteCustomer:'Delete',confirmDelete:'Remove this customer from the active list?',customerDeleted:'Customer removed.',remind:'Remind',remindScheduled:'Reminder scheduled.',reminderOn:'Reminder on',reminderOff:'No reminder',reminderSent:'Reminder sent',fromContacts:'From contacts',phoneOnly:'Phone only',contactsUnsupported:'Contacts picker not supported here.',contactsDenied:'Could not read contacts.',phoneOnlyHint:'Name is optional — phone is enough to save.',registeredCode:'Registered ID',idUpdated:'Customer ID updated',searchCustomers:'Search by customer name or phone',priceCompare:'Price compare',priceCompareHint:'Manual / sample prices vs JumboTail, Flipkart, Amazon',resetPrices:'Reset samples',yourPrice:'Your price',bestDeal:'Best',priceCompareDisclaimer:'Sample data only — not live marketplace scraping.',
     todaySales:'Today credit',todayPayments:'Today payments',lowStock:'Low stock',
     addEntry:'Add entry',speakKhata:'Speak khata',speakStock:'Speak stock',
     recentActivity:'Recent activity',recentTxns:'Recent transactions',
@@ -288,7 +286,7 @@ function updateSectionTitle(){
 }
 function applyLanguage(language){
   currentLanguage=translations[language]?language:'en';
-  document.documentElement.lang=languageLocales[currentLanguage];
+  document.documentElement.lang=languageLocales[currentLanguage]||'en-IN';
   document.querySelectorAll('[data-i18n]').forEach(element=>{element.textContent=t(element.dataset.i18n);});
   document.querySelectorAll('[data-i18n-placeholder]').forEach(element=>{element.placeholder=t(element.dataset.i18nPlaceholder);});
   document.querySelectorAll('[data-i18n-aria-label]').forEach(element=>{element.setAttribute('aria-label',t(element.dataset.i18nAriaLabel));});
@@ -296,14 +294,20 @@ function applyLanguage(language){
   document.querySelectorAll('.language-option').forEach(option=>{
     option.setAttribute('aria-pressed',String(option.dataset.language===currentLanguage));
   });
-  document.getElementById('languageSelectedLabel').textContent=
-    document.querySelector(`.language-option[data-language="${currentLanguage}"]`).textContent;
+  const selectedLabel=document.getElementById('languageSelectedLabel');
+  const selectedOption=document.querySelector(`.language-option[data-language="${currentLanguage}"]`);
+  if(selectedLabel && selectedOption){
+    selectedLabel.textContent=selectedOption.textContent;
+  }
   currencyFormatter=new Intl.NumberFormat(languageLocales[currentLanguage],{style:'currency',currency:'INR',maximumFractionDigits:2});
   const selectedCredit=document.querySelector('.credit-option[aria-pressed="true"]');
-  document.getElementById('customerAmountLabel').textContent=t(selectedCredit.dataset.type==='given'?'amountGiven':'amountTaken');
+  const amountLabel=document.getElementById('customerAmountLabel');
+  if(amountLabel && selectedCredit){
+    amountLabel.textContent=t(selectedCredit.dataset.type==='given'?'amountGiven':'amountTaken');
+  }
   updateSectionTitle();
-  renderCustomers();
-  renderInv(inventoryItems);
+  if(customerList) renderCustomers();
+  if(typeof renderInv==='function') renderInv(inventoryItems||[]);
 }
 function showSection(id){
   currentSection=id;
@@ -349,6 +353,7 @@ function isCustomerRecord(customer){
     && !Number.isNaN(Date.parse(customer.date));
 }
 function setNotice(element,message,isError){
+  if(!element) return;
   element.textContent=message;
   element.hidden=!message;
   element.classList.toggle('error',Boolean(isError));
@@ -364,12 +369,16 @@ function reminderStatusFor(customerId){
 }
 
 function renderCustomers(){
+  if(!customerList) return;
   customerList.replaceChildren();
   const creditGiven=customers.reduce((total,customer)=>total+Math.max(0, Number(customer.balance_rupees ?? customer.amount) || 0),0);
   const creditTaken=snapshot?.summary ? (Number(snapshot.summary.total_payment_paise)||0)/100 : customers.filter(c=>c.type==='taken').reduce((t,c)=>t+c.amount,0);
-  document.getElementById('totalCreditGiven').textContent=currencyFormatter.format(creditGiven);
-  document.getElementById('totalCreditTaken').textContent=currencyFormatter.format(creditTaken);
-  const searchTerm=document.getElementById('customerSearch').value.trim().toLocaleLowerCase(languageLocales[currentLanguage]);
+  const totalGivenEl=document.getElementById('totalCreditGiven');
+  const totalTakenEl=document.getElementById('totalCreditTaken');
+  if(totalGivenEl) totalGivenEl.textContent=currencyFormatter.format(creditGiven);
+  if(totalTakenEl) totalTakenEl.textContent=currencyFormatter.format(creditTaken);
+  const searchInput=document.getElementById('customerSearch');
+  const searchTerm=(searchInput?.value||'').trim().toLocaleLowerCase(languageLocales[currentLanguage]);
   const visibleCustomers=customers.filter(customer=>
     `${customer.name} ${customer.phone} ${customer.code||''}`.toLocaleLowerCase(languageLocales[currentLanguage]).includes(searchTerm),
   );
@@ -388,12 +397,12 @@ function renderCustomers(){
     const details=document.createElement('button');
     details.type='button';
     details.className='customer-row-main';
-    details.setAttribute('aria-label',`${customer.name}, ${customer.code||''}, ${currencyFormatter.format(Number(customer.balance_rupees ?? customer.amount) || 0)}`);
+    details.setAttribute('aria-label',`${customer.name}, ${customer.phone || ''}, ${currencyFormatter.format(Number(customer.balance_rupees ?? customer.amount) || 0)}`);
     const name=document.createElement('h3');
     name.textContent=customer.name || customer.phone || t('customer');
     const meta=document.createElement('p');
     meta.className='customer-meta';
-    meta.textContent=`${customer.code || '—'} · ${customer.phone || '—'}`;
+    meta.textContent=customer.phone || '—';
     const reminderLine=document.createElement('p');
     reminderLine.className=`customer-reminder${status.active?' is-on':''}${status.sent?' is-sent':''}`;
     reminderLine.textContent=status.active && status.dueAt
@@ -559,6 +568,10 @@ voiceButton.addEventListener('click',async ()=>{
     const reply=result.reply_text || 'Ho gaya.';
     setVoiceStatus(result.transcript ? `Suna: ${result.transcript} — ${reply}` : reply);
     await playReply(reply);
+    if(result?.intent==='FIND_WHOLESALE' && result.marketplace){
+      showSection('marketplace');
+      applyMarketplaceVoiceResult(result.marketplace);
+    }
     // Persist + refresh list so newly voice-added customers appear immediately
     await refreshFromBackend();
     if(result?.customer?.id && !customers.some(c=>String(c.id)===String(result.customer.id))){
@@ -580,16 +593,16 @@ voiceButton.addEventListener('click',async ()=>{
     voiceBusy=false;
   }
 });
-document.getElementById('cancelCustomerEdit').addEventListener('click',()=>{
+document.getElementById('cancelCustomerEdit')?.addEventListener('click',()=>{
   resetCustomerForm();
   showSection('customers');
 });
-document.getElementById('customerSearch').addEventListener('input',renderCustomers);
-document.getElementById('customerSearchForm').addEventListener('submit',event=>{
+document.getElementById('customerSearch')?.addEventListener('input',renderCustomers);
+document.getElementById('customerSearchForm')?.addEventListener('submit',event=>{
   event.preventDefault();
   renderCustomers();
 });
-customerList.addEventListener('click',async event=>{
+customerList?.addEventListener('click',async event=>{
   const actionBtn=event.target.closest('[data-action]');
   if(actionBtn){
     event.preventDefault();
@@ -646,13 +659,9 @@ customerForm.addEventListener('submit',async event=>{
   try{
     await ensureAuth();
     if(editingCustomerId){
-      const updated=await updateCustomer(editingCustomerId,{name:resolvedName, phone});
-      if(updated?.customer_code){
-        setNotice(document.getElementById('registeredCodeNotice'), `${t('idUpdated')}: ${updated.customer_code}`, false);
-      }
+      await updateCustomer(editingCustomerId,{name:resolvedName, phone});
     }else{
       const created=await createCustomer({name:resolvedName, phone});
-      setNotice(document.getElementById('registeredCodeNotice'), `${t('registeredCode')}: ${created.customer_code}`, false);
       if(amount>0){
         const txnType=type==='taken'?'payment':'credit';
         const txnDate=(dateValue || getLocalDateTime()).slice(0,10);
@@ -682,7 +691,6 @@ const tabSales=document.getElementById('tabSales'),tabPurch=document.getElementB
 tabSales.addEventListener('click',()=>{tabSales.classList.remove('secondary');tabPurch.classList.add('secondary');tabSales.setAttribute('aria-selected','true');tabPurch.setAttribute('aria-selected','false');document.getElementById('salesCard').style.display='block';document.getElementById('purchCard').style.display='none';});
 tabPurch.addEventListener('click',()=>{tabPurch.classList.remove('secondary');tabSales.classList.add('secondary');tabPurch.setAttribute('aria-selected','true');tabSales.setAttribute('aria-selected','false');document.getElementById('salesCard').style.display='none';document.getElementById('purchCard').style.display='block';});
 let inventoryItems=[];
-let quoteCatalog=[];
 const it=document.getElementById('invTable');
 function normalizeStockItem(i){
   return {
@@ -736,7 +744,7 @@ document.getElementById('addInventoryButton')?.addEventListener('click',async ()
 });
 async function onStockRowClick(item){
   if(!item?.id) return;
-  const action=window.prompt('Stock action: add / remove / quotes','quotes');
+  const action=window.prompt('Stock action: add / remove','add');
   if(!action) return;
   const mode=action.trim().toLowerCase();
   try{
@@ -755,7 +763,7 @@ async function onStockRowClick(item){
       await refreshInventory();
       return;
     }
-    await loadQuotesForItem(item.id);
+    setNotice(document.getElementById('inventoryNotice'),'Use add or remove. Compare wholesale fares in Market.',true);
   }catch(err){
     setNotice(document.getElementById('inventoryNotice'),err.message,true);
   }
@@ -772,15 +780,15 @@ try{
   console.error('Unable to load language preference:',error);
 }
 applyLanguage(savedLanguage);
-if(languageLoadFailed) setNotice(languageNotice,t('languageLoadError'),true);
+if(languageLoadFailed && languageNotice) setNotice(languageNotice,t('languageLoadError'),true);
 document.querySelectorAll('.language-option').forEach(option=>option.addEventListener('click',()=>{
   applyLanguage(option.dataset.language);
-  languageDropdown.open=false;
+  if(languageDropdown) languageDropdown.open=false;
   try{
     localStorage.setItem('voiceKhata.language',currentLanguage);
-    setNotice(languageNotice,'',false);
+    if(languageNotice) setNotice(languageNotice,'',false);
   }catch(error){
-    setNotice(languageNotice,t('languageSaveError'),true);
+    if(languageNotice) setNotice(languageNotice,t('languageSaveError'),true);
     console.error('Unable to save language preference:',error);
   }
 }));
@@ -859,74 +867,23 @@ function updateDashboardSnapshot(state, stockSummary){
 }
 
 async function refreshInventory(){
-  const [stockListed, quoteListed] = await Promise.all([
-    listStock(),
-    listInventory().catch(()=>({items:[]})),
-  ]);
+  const stockListed = await listStock();
   inventoryItems=(Array.isArray(stockListed)?stockListed:[]).map(normalizeStockItem);
-  quoteCatalog=quoteListed.items||[];
   renderInv(inventoryItems);
-  await renderPriceCompareFromApi(inventoryItems.filter(i=>i.low_stock).slice(0,5));
   return {items:inventoryItems, low_stock_count:inventoryItems.filter(i=>i.low_stock).length};
-}
-
-function quoteIdForStockItem(item){
-  const match=quoteCatalog.find(q=>String(q.name).toLowerCase()===String(item.name).toLowerCase());
-  return match?.id || null;
-}
-
-async function renderPriceCompareFromApi(items){
-  const body=document.getElementById('priceCompareBody');
-  if(!body) return;
-  body.replaceChildren();
-  const targets=items?.length?items:inventoryItems.slice(0,5);
-  for(const item of targets){
-    const quoteId=quoteIdForStockItem(item);
-    if(!quoteId) continue;
-    try{
-      const data=await getItemQuotes(quoteId);
-      const bySource=Object.fromEntries((data.quotes||[]).map(q=>[q.source, q.price_rupees]));
-      const tr=document.createElement('tr');
-      const best=data.best_source?`${sourceLabel(data.best_source)} ₹${Number(data.best_price_rupees).toFixed(0)}`:'—';
-      [
-        item.name,
-        `₹${Number(item.unit_cost_rupees||item.unit_price_rupees||0).toFixed(0)}`,
-        bySource.jumbotail!=null?`₹${Number(bySource.jumbotail).toFixed(0)}`:'—',
-        bySource.flipkart!=null?`₹${Number(bySource.flipkart).toFixed(0)}`:'—',
-        bySource.amazon!=null?`₹${Number(bySource.amazon).toFixed(0)}`:'—',
-        best,
-      ].forEach((value,index)=>{
-        const td=document.createElement('td');
-        td.textContent=value;
-        if(index===5) td.className='price-best';
-        tr.append(td);
-      });
-      body.append(tr);
-    }catch{
-      /* skip item without quotes */
-    }
-  }
-}
-
-async function loadQuotesForItem(itemId){
-  if(!itemId) return;
-  const item=inventoryItems.find(i=>String(i.id)===String(itemId));
-  if(item) await renderPriceCompareFromApi([item]);
 }
 
 async function refreshFromBackend(){
   try{
     await ensureAuth();
-    const [state, listed, stockListed, stockSummary, quoteListed] = await Promise.all([
+    const [state, listed, stockListed, stockSummary] = await Promise.all([
       getState(),
       listCustomers(),
       listStock(),
       getStockSummary(),
-      listInventory().catch(()=>({items:[]})),
     ]);
     snapshot = state;
     inventoryItems = (Array.isArray(stockListed)?stockListed:[]).map(normalizeStockItem);
-    quoteCatalog = quoteListed.items||[];
     const balances = new Map((state.customers||[]).map(c=>[String(c.id), c]));
     customers = (listed.items||[]).map(c=>{
       const bal = balances.get(String(c.id));
@@ -959,7 +916,6 @@ async function refreshFromBackend(){
     updateReportsFromSummary(state.summary);
     updateDashboardSnapshot(state, stockSummary);
     renderRecentActivity(state.recent||[]);
-    await renderPriceCompareFromApi(inventoryItems.filter(i=>i.low_stock).slice(0,5));
   }catch(error){
     setNotice(customerNotice, `Backend: ${error.message}`, true);
     console.error(error);
@@ -1037,43 +993,48 @@ document.getElementById('phoneOnlyToggle')?.addEventListener('click',()=>{
   const nameInput=document.getElementById('customerName');
   nameInput.value='';
   nameInput.removeAttribute('required');
-  setNotice(document.getElementById('customerFormNotice'),t('phoneOnlyHint'),false);
+  setNotice(document.getElementById('customerFormNotice'),'',false);
   document.getElementById('customerPhone').focus();
 });
 
-document.getElementById('refreshQuotes')?.addEventListener('click',async ()=>{
-  try{
-    await ensureAuth();
-    await renderPriceCompareFromApi(inventoryItems.filter(i=>i.low_stock).slice(0,5));
-  }catch(err){
-    setNotice(document.getElementById('inventoryNotice'),err.message,true);
-  }
-});
+mountMarketplace(document.getElementById('marketplaceRoot'));
 
 (async function boot(){
   setVoiceStatus(isRecordingSupported() ? 'Bolne ke liye dabaiye' : 'Mic unavailable — use Add customer');
   try{
     await healthCheck();
-    await mountAuthGate({ root: document.body });
-    mountWelcome({
-      root:document.body,
-      initialLanguage:currentLanguage,
-      onContinue:(language)=>{
+    const session=await mountAuthGate({
+      root: document.body,
+      initialLanguage: currentLanguage,
+      onLanguage: (language)=>{
         applyLanguage(language);
         try{localStorage.setItem('voiceKhata.language',language);}catch{}
       },
     });
+    if(session?.language){
+      applyLanguage(session.language);
+    }
     const profileCard=document.querySelector('#profile .profile');
     if(profileCard){
       const email=getShopEmail();
+      const profileEmail=document.getElementById('profileEmail');
+      if(profileEmail){
+        profileEmail.value=email||'';
+        profileEmail.readOnly=true;
+      }
       let emailLine=document.getElementById('shopEmailLine');
       if(!emailLine){
         emailLine=document.createElement('p');
         emailLine.id='shopEmailLine';
-        emailLine.style.cssText='color:var(--muted);font-size:13px;margin:0 0 8px';
+        emailLine.className='shop-email-line';
         profileCard.insertBefore(emailLine, profileCard.children[2] || null);
       }
       emailLine.textContent=email?`Signed in as ${email}`:'';
+      const avatar=profileCard.querySelector('.avatarbig');
+      if(avatar && email){
+        const local=email.split('@')[0]||'';
+        avatar.textContent=(local.slice(0,2)||'VK').toUpperCase();
+      }
       if(!document.getElementById('signOutButton')){
         const signOutBtn=document.createElement('button');
         signOutBtn.type='button';
@@ -1088,6 +1049,9 @@ document.getElementById('refreshQuotes')?.addEventListener('click',async ()=>{
       }
     }
     await refreshFromBackend();
+    if(session?.shopReset){
+      setVoiceStatus('New email — shop data reset. Start fresh.');
+    }
   }catch(err){
     setVoiceStatus(`Backend offline: ${err.message}`);
     setNotice(customerNotice, `Backend se connect nahi hua: ${err.message}`, true);

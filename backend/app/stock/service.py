@@ -219,22 +219,48 @@ async def adjust_stock(
     return item
 
 
+PROVISION_STOCK_CATALOG = [
+    # name, category, qty, unit_price_paise, minimum, supplier
+    ("Fortune Sunflower Oil 1L", "edible_oils", 36, 15800, 12, "Oil Traders"),
+    ("Fortune Sunflower Oil 5L", "edible_oils", 12, 72000, 4, "Oil Traders"),
+    ("Saffola Gold Oil 1L", "edible_oils", 18, 21000, 8, "Oil Traders"),
+    ("Aashirvaad Atta 5kg", "wheat_flour", 40, 28000, 10, "Grain Depot"),
+    ("Aashirvaad Atta 10kg", "wheat_flour", 16, 54000, 5, "Grain Depot"),
+    ("India Gate Basmati Rice 5kg", "rice", 20, 65000, 6, "Grain Depot"),
+    ("Sona Masoori Rice 25kg", "rice", 8, 155000, 2, "Rice Mill"),
+    ("Madhur Sugar 1kg", "sugar", 60, 4800, 20, "Wholesale Hub"),
+    ("Tata Salt 1kg", "salt", 80, 3000, 24, "Wholesale Hub"),
+    ("Toor Dal 1kg", "pulses", 45, 15500, 15, "Dal Mandi"),
+    ("Moong Dal 1kg", "pulses", 30, 13500, 12, "Dal Mandi"),
+    ("Chana Dal 1kg", "pulses", 28, 10500, 12, "Dal Mandi"),
+    ("Everest Turmeric 200g", "spices", 48, 5600, 20, "Masala Mart"),
+    ("MDH Garam Masala 100g", "spices", 36, 5100, 18, "Masala Mart"),
+    ("Parle-G 800g", "biscuits", 40, 6000, 16, "FMCG Depot"),
+    ("Tata Tea Gold 500g", "beverages", 24, 30000, 10, "FMCG Depot"),
+    ("Amul Ghee 1L", "dairy", 10, 61000, 4, "Dairy Hub"),
+    ("Amul Butter 500g", "dairy", 18, 30000, 8, "Dairy Hub"),
+    ("Surf Excel 1kg", "cleaning", 22, 19800, 8, "Home Care Depot"),
+    ("Harpic 1L", "cleaning", 16, 15500, 6, "Home Care Depot"),
+    ("Lux Soap 3x150g", "personal_care", 30, 10200, 12, "Home Care Depot"),
+]
+
+
 async def seed_stock_if_empty(db: AsyncSession, shop_id: UUID) -> None:
-    count = (
-        await db.execute(
-            select(func.count()).select_from(Item).where(Item.shop_id == shop_id)
-        )
-    ).scalar() or 0
-    if count:
-        return
-    catalog = [
-        ("Rice 5kg", "groceries", 42, 32000, 10, "Local Mill"),
-        ("Wheat Flour 5kg", "groceries", 18, 45000, 10, "Local Mill"),
-        ("Sugar 1kg", "groceries", 6, 4800, 10, "Wholesale Hub"),
-        ("Cooking Oil 1L", "groceries", 0, 18000, 8, "Oil Traders"),
-        ("Tea 250g", "beverages", 35, 12000, 10, "Tea Estate"),
-    ]
-    for name, category, qty, price, minimum, supplier in catalog:
+    """Ensure generic provision-store stock rows exist (adds missing names)."""
+    existing_names = {
+        row[0]
+        for row in (
+            await db.execute(
+                select(Item.name).where(
+                    Item.shop_id == shop_id,
+                    Item.status == ItemStatus.active.value,
+                )
+            )
+        ).all()
+    }
+    for name, category, qty, price, minimum, supplier in PROVISION_STOCK_CATALOG:
+        if name in existing_names:
+            continue
         await create_item(
             db,
             shop_id,

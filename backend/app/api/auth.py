@@ -27,10 +27,42 @@ def _normalize_email(raw: str) -> str:
     return email
 
 
-async def _issue_demo_shop_token(db: AsyncSession, email: str | None = None) -> TokenResponse:
+async def _issue_demo_shop_token(
+    db: AsyncSession,
+    email: str | None = None,
+    *,
+    reset: bool = False,
+) -> TokenResponse:
+    from datetime import datetime
+
+    from app.api.inventory import seed_inventory_if_empty
     from app.api.voice import get_demo_shop
+    from app.database.models import ShopLoginState
+    from app.khata.shop_reset import reset_shop_data
+    from app.stock.service import seed_stock_if_empty
 
     shop = await get_demo_shop(db)
+    shop_reset = False
+    if email:
+        state = await db.get(ShopLoginState, shop.id)
+        previous = ((state.active_email if state else "") or "").strip().lower()
+        if reset or previous != email:
+            await reset_shop_data(db, shop.id)
+            shop_reset = True
+            if state is None:
+                state = ShopLoginState(shop_id=shop.id, active_email=email)
+                db.add(state)
+            else:
+                state.active_email = email
+                state.updated_at = datetime.utcnow()
+            await db.commit()
+            await seed_inventory_if_empty(db, shop)
+            await seed_stock_if_empty(db, shop.id)
+            from app.marketplace.seed import seed_default_stars, seed_marketplace
+
+            await seed_marketplace(db, shop_id=shop.id)
+            await seed_default_stars(db, shop.id)
+
     claims = {"sub": str(shop.id), "shop": shop.name}
     if email:
         claims["email"] = email
@@ -40,6 +72,7 @@ async def _issue_demo_shop_token(db: AsyncSession, email: str | None = None) -> 
         shop_id=shop.id,
         shop_name=shop.name,
         email=email,
+        shop_reset=shop_reset,
     )
 
 
@@ -59,9 +92,9 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/email", response_model=TokenResponse)
 async def email_login(payload: EmailLoginRequest, db: AsyncSession = Depends(get_db)):
-    """Passwordless shop access: email only, shared demo shop for now."""
+    """Passwordless shop access. A new/different email wipes shared demo shop data."""
     email = _normalize_email(payload.email)
-    return await _issue_demo_shop_token(db, email)
+    return await _issue_demo_shop_token(db, email, reset=payload.reset)
 
 
 @router.post("/demo", response_model=TokenResponse)

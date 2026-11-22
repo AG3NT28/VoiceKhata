@@ -130,11 +130,30 @@ async def transcribe_detailed(
             "note": "GNANI_API_KEY not set - returning mock transcript",
         }
 
+    # Gnani Prisma is biased via keyterms/topic (not offline fine-tunes).
+    # Price-comparison JSONL trains these lists for grocery / marketplace ASR.
+    try:
+        from app.ai.price_dataset import gnani_keyterms_json, gnani_topic
+
+        # Combine the trained price-comparison terms with our multilingual
+        # ledger vocabulary (Telugu / Kannada / Tamil included).
+        price_terms = json.loads(gnani_keyterms_json(200))
+        seen = set(KEYTERMS)
+        keyterms = json.dumps(
+            KEYTERMS + [term for term in price_terms if term not in seen],
+            ensure_ascii=False,
+        )
+        topic = gnani_topic()
+    except Exception:
+        keyterms = json.dumps(KEYTERMS, ensure_ascii=False)
+        topic = "Indian kirana shopkeeper speaking about khata ledger and wholesale prices."
+
     data = {
         "model": "prisma-v3.0",
         "language_code": language_code,
         "format": output_format,
-        "keyterms": json.dumps(KEYTERMS, ensure_ascii=False),
+        "keyterms": keyterms,
+        "topic": topic[:1600],
     }
     if previous_text:
         data["previous_text"] = previous_text[-600:]
