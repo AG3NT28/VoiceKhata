@@ -132,6 +132,7 @@ async def transcribe_detailed(
 
     # Gnani Prisma is biased via keyterms/topic (not offline fine-tunes).
     # Price-comparison JSONL trains these lists for grocery / marketplace ASR.
+    # API hard-limit: keyterms ≤ 200 whitespace tokens (INVALID_CONTEXT if over).
     try:
         from app.ai.price_dataset import gnani_keyterms_json, gnani_topic
 
@@ -147,6 +148,23 @@ async def transcribe_detailed(
     except Exception:
         keyterms = json.dumps(KEYTERMS, ensure_ascii=False)
         topic = "Indian kirana shopkeeper speaking about khata ledger and wholesale prices."
+
+    # Belt-and-suspenders: re-parse and trim if payload somehow exceeds 200 tokens.
+    try:
+        import json as _json
+
+        _terms = _json.loads(keyterms) if isinstance(keyterms, str) else list(keyterms)
+        _kept: list[str] = []
+        _used = 0
+        for _t in _terms:
+            _w = max(1, len(str(_t).split()))
+            if _used + _w > 200:
+                break
+            _kept.append(str(_t))
+            _used += _w
+        keyterms = _json.dumps(_kept, ensure_ascii=False)
+    except Exception:
+        pass
 
     data = {
         "model": "prisma-v3.0",

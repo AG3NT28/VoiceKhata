@@ -33,6 +33,16 @@ def test_training_summary_and_keyterms():
     assert raw.startswith("[") and "udhaar" in raw
 
 
+def test_gnani_keyterms_never_exceed_api_limit():
+    import json
+
+    terms = gnani_keyterms(200)
+    assert len(terms) <= 200
+    assert all(" " not in t for t in terms), "multi-word keyterms inflate Gnani token count"
+    payload = json.loads(gnani_keyterms_json(500))
+    assert len(payload) <= 200
+
+
 def test_few_shots_map_to_find_wholesale():
     shots = few_shot_from_price_dataset(12)
     assert len(shots) >= 5

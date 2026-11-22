@@ -181,14 +181,32 @@ def _collect_terms() -> list[str]:
     return out
 
 
+def _flatten_keyterm_tokens(terms: list[str]) -> list[str]:
+    """Split phrases into single tokens — Gnani counts each whitespace piece."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for term in terms:
+        for part in str(term).replace(",", " ").split():
+            token = part.strip()
+            if len(token) < 2:
+                continue
+            key = token.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(token)
+    return out
+
+
 @lru_cache(maxsize=1)
 def gnani_keyterms(limit: int = 200) -> list[str]:
-    """Up to 200 keyterms for Gnani Prisma v3 context bias."""
-    return _collect_terms()[: max(1, min(200, limit))]
+    """Up to `limit` single-token keyterms (Gnani Prisma max = 200)."""
+    max_n = max(1, min(200, int(limit)))
+    return _flatten_keyterm_tokens(_collect_terms())[:max_n]
 
 
 def gnani_keyterms_json(limit: int = 200) -> str:
-    return json.dumps(gnani_keyterms(limit), ensure_ascii=False)
+    return json.dumps(gnani_keyterms(limit)[:200], ensure_ascii=False)
 
 
 def gnani_topic() -> str:
